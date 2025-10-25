@@ -21,9 +21,12 @@ git clone https://github.com/Harly-1506/4VNfoods-Deep-learning.git
 
 cd DL-DuDoan33MonAnVietNam
 #run classification
-run classifi_main.py
+python classifi_main.py
 #run segmentation
-run seg_main.py
+python seg_main.py
+
+# khi triển khai trên Docker để chạy UI App dự đoán thì file docker tự kích hoạt, chạy Local thì run code sau
+streamlit run .\app.py
 ```
 **__Lưu ý__**: Khi bạn chạy seg_main.py, phải mất 8 đến 10 phút để chuẩn bị dữ liệu
 ## Kết quả phân loại

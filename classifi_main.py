@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from utils.processing import *
 from utils.vnfood_ds import *
 from utils.trainer import fit
-#from model.cnn import miniVGG
+from model.cnn import miniVGG
 from model.vggnet import vgg16
 from model.resnet import resnet18
 
@@ -28,10 +28,9 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Using device:", device)
 
-    #model = miniVGG().to(device)  
-  
-    #model = vgg16(pretrained = True)
-    model = resnet18(pretrained = True)
+    #model = miniVGG().to(device)  # chạy CNN cơ bản
+    #model = vgg16(pretrained = True) # chạy VGG16
+    model = resnet18(pretrained = True) # chạy resnet18
 
     train_loader, valid_loader, test_loader = build_loaders()
 
