@@ -18,14 +18,14 @@
 ```python
 git clone https://github.com/Harly-1506/4VNfoods-Deep-learning.git
 
-cd 4VNfoods_Deep_learning
+cd DL-DuDoan33MonAnVietNam
 #run classification
 run classifi_main.py
 #run segmentation
 run seg_main.py
 ```
 **__Lưu ý__**: Khi bạn chạy seg_main.py, phải mất 8 đến 10 phút để chuẩn bị dữ liệu
-## Classification Results
+## Kết quả phân loại
 |     Methods                |     Accuracy    |     Loss        |     Val_Accuracy    |     Val_Loss    |     Test_accuracy    |
 |----------------------------|-----------------|-----------------|---------------------|-----------------|----------------------|
 |     Resnet18_pretrained    |     99.926      |     6.78E-05    |     96.907          |     0.1106      |     95.886           |
@@ -40,7 +40,7 @@ run seg_main.py
 |     MLP_4hidden            |     47.706      |     0.0583      |     37.886          |     2.3706      |     38.303           |
 |     MLP_3hidden            |     49.761      |     0.0512      |     36.082          |     3.0187      |     41.902           |
 |     MLP_2hidden            |     48.844      |     0.0438      |     40.979          |     1.6916      |     41.516           |
-## Segmentation Results
+## Kết quả phân đoạn
 |     Methods          |     iou/valid    |     iou     banhmi    |     iou     banhtrang    |     iou     comtam    |     iou     pho    |     iou_clutter    |
 |----------------------|------------------|-----------------------|--------------------------|-----------------------|--------------------|--------------------|
 |     Unet_ResNet34    |     0.8625       |     0.8273            |     0.8529               |     0.7083            |     0.7099         |     0.9084         |
@@ -54,10 +54,7 @@ run seg_main.py
 
 ## Demo:
 
-- Demo program you can follow in this repository: [Demo](https://github.com/RC-Sho0/4VNFood--Demo-App-by-Streamlit)
+- Chương trình demo bạn có thể theo dõi trong kho lưu trữ này: [Demo](http://mtltechnology.ddns.net:1111/)
 ___
-*Author: Harly*
 
-*If you have any problems, please leave a message in Issues*
-
-*Give me a star :star: if you find it useful, thanks*
+*Hãy cho tôi một ngôi sao :star: nếu bạn thấy nó hữu ích, cảm ơn*
