@@ -49,7 +49,7 @@ run seg_main.py
 |     Unet-VGG16       |     0.8716       |     0.8627            |     0.8713               |     0.7395            |     0.7463         |     0.9146         |
 ## Plot Val Accuracy
 - Classification:
-![Example](https://github.com/Harly-1506/4VNfoods_Project/blob/main/images/W%26B%20valac.png "This is a sample image.")
+![Example](https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam/blob/main/images/W%26B%20valac.png "This is a sample image.")
 - Segmentation:
 ![image](https://github.com/Harly-1506/4VNfoods-Deep-learning/assets/86733695/6d772489-a7a4-47b6-b6e9-5fe7da503fd3)
 
