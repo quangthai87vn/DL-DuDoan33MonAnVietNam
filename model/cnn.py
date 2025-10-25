@@ -17,7 +17,7 @@ class ConvReluBn(nn.Module):
 
     return out
 '''
-Đây là một mạng CNN phân loại ảnh tự xây, dùng cho bài toán nhận diện món ăn Việt Nam (30 lớp).
+Đây là một mạng CNN phân loại ảnh tự xây, dùng cho bài toán nhận diện món ăn Việt Nam (33 lớp).
 Cấu trúc gồm 5 khối convolution chính → giảm kích thước dần bằng MaxPooling → Flatten → 2 lớp fully-connected.
 '''
 class simpleCNN(nn.Module):
@@ -34,7 +34,7 @@ class simpleCNN(nn.Module):
     self.out = nn.Sequential(
       nn.Linear(512*7*7, 128),
       nn.ReLU(inplace = True),
-      nn.Linear(128,30)
+      nn.Linear(128,33)
     )
     if init_weight:
       for m in self.modules():
@@ -84,7 +84,7 @@ class miniVGG(nn.Module):
     self.out = nn.Sequential(
       nn.Linear(512*7*7, 128),
       nn.ReLU(inplace = True),
-      nn.Linear(128,30)
+      nn.Linear(128,33)
     )
 
     if init_weight:

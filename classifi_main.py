@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 import os
-import torch
+import torch 
 from torch.utils.data import DataLoader
 
 # ====== project imports ======
@@ -28,9 +28,9 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Using device:", device)
 
-    #model = miniVGG().to(device)  # chạy CNN cơ bản
+    model = miniVGG().to(device)  # chạy CNN cơ bản
     #model = vgg16(pretrained = True) # chạy VGG16
-    model = resnet18(pretrained = True) # chạy resnet18
+    #model = resnet18(pretrained = True) # chạy resnet18
 
     train_loader, valid_loader, test_loader = build_loaders()
 
