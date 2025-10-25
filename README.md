@@ -17,8 +17,7 @@
 
 ## Cách chạy Project :question:
 ```python
-git clone https://github.com/Harly-1506/4VNfoods-Deep-learning.git
-
+git clone https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam.git
 cd DL-DuDoan33MonAnVietNam
 #run classification
 python classifi_main.py
