@@ -3,9 +3,12 @@
 - Trong dự án này, tôi sử dụng Pytorch để thực hiện phân loại và phân đoạn 4 món ăn phổ biến ở Việt Nam. Ngoài ra, để việc phân đoạn ảnh dễ dàng hơn, tôi đã sử dụng thêm thư viện [Segmentation Pytorch](https://github.com/qubvel/segmentation_models.pytorch)
 
 ## Tập dữ liệu :egg: 
-- Dữ liệu được lấy từ tập dữ liệu [30VNFoods](https://www.kaggle.com/datasets/quandang/vietnamese-foods), tập dữ liệu này gồm 30 món
+- Dữ liệu được lấy từ tập dữ liệu [30VNFoods](https://www.kaggle.com/datasets/quandang/vietnamese-foods)
 
-  ![Example](https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam/tree/main/images/image.png "This is a sample image.")
+
+
+   ![Example](https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam/tree/main/images/image.png "This is a sample image.")
+
 
 ## Mô hình
  - Tôi sử dụng nhiều mô hình khác nhau, từ MLP đến CNN đơn giản, miniVGG. Các mô hình được đào tạo trước như VGG16, ResNet18.
