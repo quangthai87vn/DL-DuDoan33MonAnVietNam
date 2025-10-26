@@ -7,6 +7,11 @@ import torch
 import cv2
 from skimage.io import imread, imsave
 
+#mới thêm
+from PIL import ImageFile, Image
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # tránh crash với JPEG hỏng
+
+
 # seg= transforms.Compose([
 #     transforms.ToTensor(),
     
@@ -23,16 +28,23 @@ class FoodVNDs(Dataset):
   def __len__(self):
     return len(self.image_paths)
 
+  '''
   def __getitem__(self, idx):
-    image = PIL.Image.open(self.image_paths[idx])
+    image = PIL.Image.open(self.image_paths[idx]) 
     label = self.labels[idx]
 
     if self.transform:
       image = self.transform(image)
 
     return image, label
-  
-
+  '''
+  def __getitem__(self, idx):
+      path = self.image_paths[idx]
+      label = self.labels[idx]
+      img = PIL.Image.open(path).convert("RGB")   # ÉP 3 KÊNH Ở ĐÂY
+      if self.transform is not None:
+          img = self.transform(img)
+      return img, label
 
 class segFoodVNDs(Dataset):
   def __init__(self, image_paths, image_masks, transform = None):

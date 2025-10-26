@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 import os
-import torch 
+import torch
 from torch.utils.data import DataLoader
 
 # ====== project imports ======
@@ -10,6 +10,7 @@ from utils.trainer import fit
 from model.cnn import miniVGG
 from model.vggnet import vgg16
 from model.resnet import resnet18
+
 
 def build_loaders():
     train_paths, train_labels, val_paths, val_labels, test_paths, test_labels = getAllDataset()
@@ -25,8 +26,14 @@ def build_loaders():
     return train_loader, valid_loader, test_loader
 
 def main():
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    #device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if torch.cuda.is_available():
+        print("GPU:", torch.cuda.get_device_name(0))
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Using device:", device)
+
+    
+
 
     model = miniVGG().to(device)  # chạy CNN cơ bản
     #model = vgg16(pretrained = True) # chạy VGG16

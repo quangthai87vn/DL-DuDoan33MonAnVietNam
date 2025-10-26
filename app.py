@@ -26,7 +26,8 @@ CLASS_NAMES = [
     "Bún bò Huế", "Bún đậu mắm tôm", "Bún mắm", "Bún riêu",
     "Bún thịt nướng", "Cá kho tộ", "Canh chua", "Cao lầu",
     "Cháo lòng", "Cơm tấm", "Gỏi cuốn", "Hủ tiếu",
-    "Mì Quảng", "Nem chua", "Phở", "Xôi xéo"
+    "Mì Quảng", "Nem chua", "Phở", "Xôi xéo",
+    'banh_da_lon','banh_tieu','banh_trung_thu'
 ]
 
 # Tiền xử lý PHẢI KHỚP lúc train (224x224 cho miniVGG của bạn)

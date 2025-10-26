@@ -10,10 +10,6 @@ import tqdm
 # bật trace CUDA rõ ràng khi debug
 os.environ.setdefault("CUDA_LAUNCH_BLOCKING", "1")
 
-#Name_food = {0: "Banh mi", 1: "Com tam", 2: "Hu tieu", 3: "Pho"}
-
-
-
 Name_food = {0: 'Banh beo',
  1:'Banh bot loc',
  2:'Banh can',
@@ -43,8 +39,10 @@ Name_food = {0: 'Banh beo',
  26:'Mi quang',
  27:'Nem chua',
  28:'Pho',
- 29:'Xoi xeo'}
-
+ 29:'Xoi xeo',
+ 30:'banh_da_lon',
+ 31:'banh_tieu',
+ 32:'banh_trung_thu'}
 
 def get_lr(optimizer: torch.optim.Optimizer) -> float:
     for g in optimizer.param_groups:
@@ -218,7 +216,7 @@ def fit(model, train_loader, valid_loader, test_loader,
         print("\n⛔ Dừng training theo yêu cầu người dùng."); traceback.print_exc()
     except Exception:
         traceback.print_exc()
-
+    '''
     try:
         state = torch.load(ckpt_path, map_location=device)
         model.load_state_dict(state["net"])
@@ -228,3 +226,12 @@ def fit(model, train_loader, valid_loader, test_loader,
         print("⚠️  Không tìm thấy/không load được checkpoint, test với trọng số hiện tại.")
         traceback.print_exc()
         test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
+    '''
+
+
+    if os.path.isfile(ckpt_path):
+        state = torch.load(ckpt_path, map_location=device)  # weights_only=True nếu dùng PyTorch mới
+        model.load_state_dict(state["net"])
+    else:
+        print("⚠️ Không tìm thấy checkpoint – train từ đầu.")
+    
