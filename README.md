@@ -27,6 +27,20 @@ python seg_main.py
 # khi triển khai trên Docker để chạy UI App dự đoán thì file docker tự kích hoạt, chạy Local thì run code sau
 streamlit run .\app.py
 ```
+
+
+### Training the Model
+
+Huấn luyện mô hình Mobinet
+
+```bash
+python mobilenet_train_enrnptys.py --train_dir C:/TRAIN/Deep Learning/vietnamese-foods/Images/Train --num_epochs 100 --batch_size 32 --model_path /models/MTL-MobileNet.pth
+```
+
+
+
+
+
 **__Lưu ý__**: Khi bạn chạy seg_main.py, phải mất 8 đến 10 phút để chuẩn bị dữ liệu
 ## Kết quả phân loại
 |     Methods                |     Accuracy    |     Loss        |     Val_Accuracy    |     Val_Loss    |     Test_accuracy    |
