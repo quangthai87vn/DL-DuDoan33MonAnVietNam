@@ -56,12 +56,29 @@ def _device_from_model(model: nn.Module) -> str:
         return str(next(model.parameters()).device)
     except StopIteration:
         return "cuda" if torch.cuda.is_available() else "cpu"
-
+'''
 def _ckpt_path() -> str:
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     ckpt_dir = os.path.join(root, "checkpoints")
     os.makedirs(ckpt_dir, exist_ok=True)
     return os.path.join(ckpt_dir, "classification_best.pt")
+'''
+
+def _ckpt_path(model: Optional[nn.Module] = None, ext: str = ".mtl") -> str:
+    """
+    Sinh đường dẫn lưu checkpoint theo tên mô hình.
+    Ví dụ: checkpoints/CustomMobileNet_best.mtl
+    """
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    ckpt_dir = os.path.join(root, "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    model_name = type(model).__name__ if model is not None else "classification"
+    return os.path.join(ckpt_dir, f"{model_name}_best{ext}")
+
+
+
+
 
 def init_wandb(wb: bool, model: nn.Module, criterion: nn.Module):
     if not wb: return None
@@ -187,7 +204,7 @@ def test(model, test_loader, optimizer, criterion, epoch, *,
 def save_weights(model: nn.Module, checkpoint_path: str) -> None:
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
     torch.save({"net": model.state_dict()}, checkpoint_path)
-
+'''
 def fit(model, train_loader, valid_loader, test_loader,
         max_epochs: int=50, max_plateau_count: int=2, wb: bool=False, device: Optional[str]=None):
     device = device or _device_from_model(model)
@@ -218,17 +235,17 @@ def fit(model, train_loader, valid_loader, test_loader,
         print("\n⛔ Dừng training theo yêu cầu người dùng."); traceback.print_exc()
     except Exception:
         traceback.print_exc()
-    '''
-    try:
-        state = torch.load(ckpt_path, map_location=device)
-        model.load_state_dict(state["net"])
-        print("Accuracy on Private Test:")
-        test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
-    except Exception:
-        print("⚠️  Không tìm thấy/không load được checkpoint, test với trọng số hiện tại.")
-        traceback.print_exc()
-        test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
-    '''
+   
+    #try:
+    #    state = torch.load(ckpt_path, map_location=device)
+    #    model.load_state_dict(state["net"])
+    #    print("Accuracy on Private Test:")
+    #    test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
+    #except Exception:
+    #    print("⚠️  Không tìm thấy/không load được checkpoint, test với trọng số hiện tại.")
+    #    traceback.print_exc()
+    #    test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
+    
 
 
     if os.path.isfile(ckpt_path):
@@ -236,4 +253,70 @@ def fit(model, train_loader, valid_loader, test_loader,
         model.load_state_dict(state["net"])
     else:
         print("⚠️ Không tìm thấy checkpoint – train từ đầu.")
-    
+'''
+
+def fit(model, train_loader, valid_loader, test_loader,
+        max_epochs: int = 50,
+        max_plateau_count: int = 2,
+        wb: bool = False,
+        device: Optional[str] = None):
+    """
+    Train/val loop với early-stop theo plateau và lưu checkpoint theo tên mô hình.
+    - Checkpoint: checkpoints/<ModelName>_best.mtl
+    - Optim: Adam(lr=1e-4, weight_decay=1e-2)
+    - Scheduler: ReduceLROnPlateau (proxy bằng 100 - val_acc)
+    """
+    device = device or _device_from_model(model)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-2)
+    scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=2, factor=0.1, min_lr=0.0)
+
+    wandb = init_wandb(wb, model, criterion)
+
+    # ✅ Lưu theo tên mô hình + đuôi .mtl (đổi thành .pt nếu bạn muốn)
+    ckpt_path = _ckpt_path(model, ext=".mtl")
+
+    best_acc_val = -1.0
+    plateau_count = 0
+    epochs = 0
+
+    try:
+        while (plateau_count <= max_plateau_count) and (epochs < max_epochs):
+            epochs += 1
+
+            tr = train(model, train_loader, optimizer, criterion, epochs,
+                       device=device, wandb=wandb, wb=wb)
+
+            val_acc = val(model, valid_loader, optimizer, criterion, epochs,
+                          device=device, wandb=wandb, wb=wb)
+
+            if val_acc > best_acc_val:
+                best_acc_val = val_acc
+                plateau_count = 0
+                save_weights(model, ckpt_path)
+                print(f"💾 Saved checkpoint: {os.path.basename(ckpt_path)} (val_acc={val_acc:.2f}%)")
+            else:
+                plateau_count += 1
+
+            # dùng 100 - val_acc làm proxy cho val_loss để step scheduler
+            loss_proxy = 100.0 - val_acc
+            scheduler.step(loss_proxy)
+
+            print(
+                f"[Epoch {epochs:03d}] "
+                f"train_loss={tr['loss']:.4f} train_acc={tr['acc']:.2f}% | "
+                f"val_acc={val_acc:.2f}% | lr={get_lr(optimizer):.2e} | "
+                f"plateau={plateau_count}/{max_plateau_count}"
+            )
+
+    except KeyboardInterrupt:
+        print("\n⛔ Dừng training theo yêu cầu người dùng."); traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
+
+    # (Tuỳ chọn) Load lại best checkpoint để sẵn sàng test/infer
+    if os.path.isfile(ckpt_path):
+        state = torch.load(ckpt_path, map_location=device)  # weights_only=True nếu dùng PyTorch mới
+        model.load_state_dict(state["net"])
+    else:
+        print("⚠️ Không tìm thấy checkpoint – giữ trọng số hiện tại.")

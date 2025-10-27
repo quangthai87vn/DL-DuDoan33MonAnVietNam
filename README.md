@@ -28,16 +28,16 @@ python seg_main.py
 streamlit run .\app.py
 ```
 
-
-### Training the Model
-
 Huấn luyện mô hình Mobinet
 
 ```bash
 python mobilenet_train_enrnptys.py --train_dir C:/TRAIN/Deep Learning/vietnamese-foods/Images/Train --num_epochs 100 --batch_size 32 --model_path /models/MTL-MobileNet.pth
 ```
 
-
+Kiểm tra mô hình Mobinet
+```bash
+python mobilenet_test.py --image_path C:\Users\Admin\OneDrive\Desktop\3.jpg --model_path C:\Users\Admin\OneDrive\DOCKER\Apps\DL-DuDoan33MonAnVietNam\Models\MTL-MobileNet.pth --label_path label.txt
+```
 
 
 
