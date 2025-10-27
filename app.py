@@ -16,7 +16,7 @@ import streamlit as st
 # 1) CẤU HÌNH
 # -----------------------------
 # Đường dẫn mặc định tới checkpoint .pt (sửa lại nếu cần)
-DEFAULT_CKPT = "checkpoints/classification_best.pt"
+DEFAULT_CKPT = "Models/classification_best.pt"
 
 # Mapping 30 lớp THEO THỨ TỰ TRAIN (index 24 = Gỏi cuốn)
 CLASS_NAMES = [

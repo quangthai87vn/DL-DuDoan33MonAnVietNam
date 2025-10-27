@@ -23,7 +23,7 @@ Cấu trúc gồm 5 khối convolution chính → giảm kích thước dần b�
 class simpleCNN(nn.Module):
   def __init__(self, init_weight = True):
     super(simpleCNN, self).__init__()
-    # self.block = ConvReluBn(3, 512)
+    
     self.conv = nn.Conv2d(3, 64, kernel_size = 3, padding = 1)
     self.relu = nn.ReLU(inplace = True)
     self.block1 = ConvReluBn(64, 128)#224
@@ -44,8 +44,7 @@ class simpleCNN(nn.Module):
               nn.init.constant_(m.weight, 1)
               nn.init.constant_(m.bias, 0)
   def forward(self, x):
-    out = self.conv(x)
-    # print(out)
+    out = self.conv(x)   
     out = self.relu(out)
     out = self.maxpool(out)
     out = self.block1(out)
@@ -58,10 +57,9 @@ class simpleCNN(nn.Module):
     out = self.maxpool(out)
     out = torch.flatten(out, 1) 
     out = self.out(out)
-
+    
     return out
     
-
 class miniVGG(nn.Module):
   def __init__(self, init_weight = True):
     super(miniVGG, self).__init__()
