@@ -1,3 +1,5 @@
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -116,7 +118,4 @@ class miniVGG(nn.Module):
     out = self.out(out)
 
     return out
-    
-
-    
-
+  
