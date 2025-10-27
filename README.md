@@ -19,8 +19,16 @@
 ```python
 git clone https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam.git
 cd DL-DuDoan33MonAnVietNam
-#run classification
-python classifi_main.py
+# train CNN cũ
+python classifi_main.py --model cnn
+
+# train MobileNet V1 mới
+python classifi_main.py --model mobilenet
+
+# train VGG16 / ResNet18 (nếu muốn)
+python classifi_main.py --model vgg16
+python classifi_main.py --model resnet18
+
 #run segmentation
 python seg_main.py
 
@@ -38,6 +46,9 @@ Kiểm tra mô hình Mobinet
 ```bash
 python mobilenet_test.py --image_path C:\Users\Admin\OneDrive\Desktop\3.jpg --model_path C:\Users\Admin\OneDrive\DOCKER\Apps\DL-DuDoan33MonAnVietNam\Models\MTL-MobileNet.pth --label_path label.txt
 ```
+
+
+
 
 
 

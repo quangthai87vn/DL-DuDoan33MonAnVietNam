@@ -10,6 +10,16 @@ import tqdm
 # bật trace CUDA rõ ràng khi debug
 os.environ.setdefault("CUDA_LAUNCH_BLOCKING", "1")
 
+# Thiết lập style tqdm mặc định
+tqdm_params = dict(
+    leave=True,
+    ncols=100,
+    dynamic_ncols=True,
+    smoothing=0.1
+)
+
+
+
 Name_food = {
                 0: 'Banh beo',
                 1:'Banh bot loc',
@@ -63,7 +73,7 @@ def _ckpt_path() -> str:
     os.makedirs(ckpt_dir, exist_ok=True)
     return os.path.join(ckpt_dir, "classification_best.pt")
 '''
-
+'''
 def _ckpt_path(model: Optional[nn.Module] = None, ext: str = ".mtl") -> str:
     """
     Sinh đường dẫn lưu checkpoint theo tên mô hình.
@@ -75,8 +85,13 @@ def _ckpt_path(model: Optional[nn.Module] = None, ext: str = ".mtl") -> str:
 
     model_name = type(model).__name__ if model is not None else "classification"
     return os.path.join(ckpt_dir, f"{model_name}_best{ext}")
-
-
+'''
+def _ckpt_path(model: Optional[nn.Module] = None, ext: str = ".mtl") -> str:
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    ckpt_dir = os.path.join(root, "checkpoints")
+    os.makedirs(ckpt_dir, exist_ok=True)
+    model_name = getattr(model, "_export_name", type(model).__name__) if model is not None else "classification"
+    return os.path.join(ckpt_dir, f"{model_name}_best{ext}")
 
 
 
@@ -113,6 +128,7 @@ def train(model, train_loader, optimizer, criterion, epoch, *,
 
     pbar = tqdm.tqdm(enumerate(train_loader), total=len(train_loader),
                      leave=True, colour="blue", desc=f"Epoch {epoch}",
+                   
                      bar_format="{desc}: {percentage:3.0f}%|{bar:50}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
     for i,(images,labels) in pbar:
         images = images.to(device, non_blocking=True)
@@ -135,6 +151,8 @@ def train(model, train_loader, optimizer, criterion, epoch, *,
 
         avg_loss = running_loss/(i+1); acc = 100.0*correct/max(1,total)
         pbar.set_postfix(loss=f"{avg_loss:.4f}", acc=f"{acc:.2f}%", lr=f"{get_lr(optimizer):.2e}")
+
+
         if wb and wandb is not None:
             wandb.log({"train/loss": avg_loss, "train/acc": acc, "lr": get_lr(optimizer), "epoch": epoch})
 
@@ -147,9 +165,20 @@ def val(model, valid_loader, optimizer, criterion, epoch, *,
     device = device or _device_from_model(model)
     running_loss=0.0; correct=0; total=0
 
-    pbar = tqdm.tqdm(enumerate(valid_loader), total=len(valid_loader),
-                     leave=True, colour="green", desc="Val",
-                     bar_format="{desc}: {percentage:3.0f}%|{bar:30}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
+    #pbar = tqdm.tqdm(enumerate(valid_loader), total=len(valid_loader),
+    #                 leave=True, colour="green", desc="Val",
+    #                  **tqdm_params,
+    #                 bar_format="{desc}: {percentage:3.0f}%|{bar:30}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
+    
+    pbar = tqdm.tqdm(
+            enumerate(valid_loader),
+            total=len(valid_loader),
+            desc="Validating",
+            colour="green",
+            **tqdm_params,
+            bar_format="{desc}: {percentage:3.0f}%|{bar:40}| loss={postfix[loss]} acc={postfix[acc]} [{elapsed}<{remaining}]"
+        )
+
     for i,(images,labels) in pbar:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
@@ -165,6 +194,8 @@ def val(model, valid_loader, optimizer, criterion, epoch, *,
 
         avg_loss = running_loss/(i+1); acc = 100.0*correct/max(1,total)
         pbar.set_postfix(loss=f"{avg_loss:.4f}", acc=f"{acc:.2f}%")
+     
+
 
     val_loss = running_loss/max(1,len(valid_loader))
     val_acc  = 100.0*correct/max(1,total)
@@ -179,9 +210,20 @@ def test(model, test_loader, optimizer, criterion, epoch, *,
     device = device or _device_from_model(model)
     running_loss=0.0; correct=0; total=0
 
-    pbar = tqdm.tqdm(enumerate(test_loader), total=len(test_loader),
-                     leave=True, colour="cyan", desc="Test",
-                     bar_format="{desc}: {percentage:3.0f}%|{bar:50}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
+    #pbar = tqdm.tqdm(enumerate(test_loader), total=len(test_loader),
+    #                 leave=True, colour="cyan", desc="Test",
+    #                 bar_format="{desc}: {percentage:3.0f}%|{bar:50}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
+    
+
+
+    pbar = tqdm.tqdm(
+            enumerate(test_loader),
+            total=len(test_loader),
+            desc="Testing",
+            colour="cyan",
+            **tqdm_params,
+            bar_format="{desc}: {percentage:3.0f}%|{bar:40}| loss={postfix[loss]} acc={postfix[acc]} [{elapsed}<{remaining}]"
+        )
     for i,(images,labels) in pbar:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
@@ -193,6 +235,7 @@ def test(model, test_loader, optimizer, criterion, epoch, *,
 
         avg_loss = running_loss/(i+1); acc = 100.0*correct/max(1,total)
         pbar.set_postfix(loss=f"{avg_loss:.4f}", acc=f"{acc:.2f}%" )
+
 
     test_loss = running_loss/max(1,len(test_loader))
     test_acc  = 100.0*correct/max(1,total)
@@ -302,12 +345,19 @@ def fit(model, train_loader, valid_loader, test_loader,
             loss_proxy = 100.0 - val_acc
             scheduler.step(loss_proxy)
 
-            print(
-                f"[Epoch {epochs:03d}] "
-                f"train_loss={tr['loss']:.4f} train_acc={tr['acc']:.2f}% | "
-                f"val_acc={val_acc:.2f}% | lr={get_lr(optimizer):.2e} | "
-                f"plateau={plateau_count}/{max_plateau_count}"
-            )
+            #print(
+            #    f"[Epoch {epochs:03d}] "
+            #    f"train_loss={tr['loss']:.4f} train_acc={tr['acc']:.2f}% | "
+            #    f"val_acc={val_acc:.2f}% | lr={get_lr(optimizer):.2e} | "
+            #    f"plateau={plateau_count}/{max_plateau_count}"
+            #)
+
+            print(f"📊 Epoch {epochs}/{max_epochs} | "
+                f"Train Loss={tr['loss']:.4f} Acc={tr['acc']:.2f}% | "
+                f"Val Acc={val_acc:.2f}% | LR={get_lr(optimizer):.2e} | Plateau {plateau_count}/{max_plateau_count}")
+
+
+
 
     except KeyboardInterrupt:
         print("\n⛔ Dừng training theo yêu cầu người dùng."); traceback.print_exc()
@@ -315,8 +365,8 @@ def fit(model, train_loader, valid_loader, test_loader,
         traceback.print_exc()
 
     # (Tuỳ chọn) Load lại best checkpoint để sẵn sàng test/infer
-    if os.path.isfile(ckpt_path):
-        state = torch.load(ckpt_path, map_location=device)  # weights_only=True nếu dùng PyTorch mới
-        model.load_state_dict(state["net"])
-    else:
-        print("⚠️ Không tìm thấy checkpoint – giữ trọng số hiện tại.")
+    #if os.path.isfile(ckpt_path):
+    #    state = torch.load(ckpt_path, map_location=device)  # weights_only=True nếu dùng PyTorch mới
+    #    model.load_state_dict(state["net"])
+    #else:
+    #    print("⚠️ Không tìm thấy checkpoint – giữ trọng số hiện tại.")

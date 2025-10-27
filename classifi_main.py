@@ -63,12 +63,13 @@ def main():
 
     name = args.model.lower()  # "cnn", "mobilenet", ...
     pretty = {"cnn":"MTL-CNN", "mobilenet":"MTL-MobiNet"}.get(name, type(model).__name__)
+    setattr(model, "_export_name", pretty)   # gắn nhãn cho model trước khi train
+    #fit(model, train_loader, valid_loader, test_loader,
+    #    max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device,
+    #    ckpt_dir="checkpoints", model_name=pretty)
 
     fit(model, train_loader, valid_loader, test_loader,
-        max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device,
-        ckpt_dir="checkpoints", model_name=pretty)
-
-
+        max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device)
 
 if __name__ == "__main__":
     import torch.multiprocessing as mp    
