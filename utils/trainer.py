@@ -9,6 +9,10 @@ import tqdm
 
 # bật trace CUDA rõ ràng khi debug
 os.environ.setdefault("CUDA_LAUNCH_BLOCKING", "1")
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.deterministic = False
+
+
 
 # Thiết lập style tqdm mặc định
 tqdm_params = dict(
@@ -66,26 +70,7 @@ def _device_from_model(model: nn.Module) -> str:
         return str(next(model.parameters()).device)
     except StopIteration:
         return "cuda" if torch.cuda.is_available() else "cpu"
-'''
-def _ckpt_path() -> str:
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    ckpt_dir = os.path.join(root, "checkpoints")
-    os.makedirs(ckpt_dir, exist_ok=True)
-    return os.path.join(ckpt_dir, "classification_best.pt")
-'''
-'''
-def _ckpt_path(model: Optional[nn.Module] = None, ext: str = ".mtl") -> str:
-    """
-    Sinh đường dẫn lưu checkpoint theo tên mô hình.
-    Ví dụ: checkpoints/CustomMobileNet_best.mtl
-    """
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    ckpt_dir = os.path.join(root, "checkpoints")
-    os.makedirs(ckpt_dir, exist_ok=True)
 
-    model_name = type(model).__name__ if model is not None else "classification"
-    return os.path.join(ckpt_dir, f"{model_name}_best{ext}")
-'''
 def _ckpt_path(model: Optional[nn.Module] = None, ext: str = ".mtl") -> str:
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     ckpt_dir = os.path.join(root, "checkpoints")
@@ -165,20 +150,12 @@ def val(model, valid_loader, optimizer, criterion, epoch, *,
     device = device or _device_from_model(model)
     running_loss=0.0; correct=0; total=0
 
-    #pbar = tqdm.tqdm(enumerate(valid_loader), total=len(valid_loader),
-    #                 leave=True, colour="green", desc="Val",
-    #                  **tqdm_params,
-    #                 bar_format="{desc}: {percentage:3.0f}%|{bar:30}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
+    pbar = tqdm.tqdm(enumerate(valid_loader), total=len(valid_loader),
+                     leave=True, colour="green", desc="Val",
+                    
+                     bar_format="{desc}: {percentage:3.0f}%|{bar:30}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
     
-    pbar = tqdm.tqdm(
-            enumerate(valid_loader),
-            total=len(valid_loader),
-            desc="Validating",
-            colour="green",
-            **tqdm_params,
-            bar_format="{desc}: {percentage:3.0f}%|{bar:40}| loss={postfix[loss]} acc={postfix[acc]} [{elapsed}<{remaining}]"
-        )
-
+  
     for i,(images,labels) in pbar:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
@@ -210,20 +187,13 @@ def test(model, test_loader, optimizer, criterion, epoch, *,
     device = device or _device_from_model(model)
     running_loss=0.0; correct=0; total=0
 
-    #pbar = tqdm.tqdm(enumerate(test_loader), total=len(test_loader),
-    #                 leave=True, colour="cyan", desc="Test",
-    #                 bar_format="{desc}: {percentage:3.0f}%|{bar:50}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
+    pbar = tqdm.tqdm(enumerate(test_loader), total=len(test_loader),
+                     leave=True, colour="cyan", desc="Test",
+                     bar_format="{desc}: {percentage:3.0f}%|{bar:50}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")
     
 
 
-    pbar = tqdm.tqdm(
-            enumerate(test_loader),
-            total=len(test_loader),
-            desc="Testing",
-            colour="cyan",
-            **tqdm_params,
-            bar_format="{desc}: {percentage:3.0f}%|{bar:40}| loss={postfix[loss]} acc={postfix[acc]} [{elapsed}<{remaining}]"
-        )
+
     for i,(images,labels) in pbar:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)

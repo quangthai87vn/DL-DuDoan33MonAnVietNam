@@ -9,37 +9,29 @@
 
 
 ## Mô hình
- - Tôi sử dụng nhiều mô hình khác nhau, từ MLP đến CNN đơn giản, miniVGG. Các mô hình được đào tạo trước như VGG16, ResNet18.
-
+- Tôi sử dụng nhiều mô hình khác nhau, từ MLP đến CNN đơn giản, miniVGG. Các mô hình được đào tạo trước như VGG16, ResNet18.
 - Đối với bài toán Phân đoạn, tôi sử dụng cấu trúc Unet với các bộ mã hóa là các mô hình được đào tạo trước để có được kết quả tốt nhất.
-
 - Tôi sử dụng Wandb để theo dõi và so sánh các thí nghiệm: [Classification](https://wandb.ai/harly/classifi_FoodVN?workspace=user-harly), [Segmentation](https://wandb.ai/harly/SegVNFood?workspace=user-harly)
 
 ## Cách chạy Project :question:
 ```python
 git clone https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam.git
 cd DL-DuDoan33MonAnVietNam
-# train CNN cũ
-python classifi_main.py --model cnn
+# Huấn luyện mô hình CNN tự xây dựng
+python classifi_main.py --model cnn --epochs 20
+python classifi_main.py --model mtl-cnn --epochs 100 --batch_size 64
+# Huấn luyện mô hình Mobinet
+python classifi_main.py --model mobilenetv4 --epochs 100 --batch_size 64
+# Huấn luyện mô hình VGG16 / ResNet18 (nếu muốn)
+python classifi_main.py --model vgg16 --epochs 100
+python classifi_main.py --model resnet18 --epochs 100
 
-# train MobileNet V1 mới
-python classifi_main.py --model mobilenet
-
-# train VGG16 / ResNet18 (nếu muốn)
-python classifi_main.py --model vgg16
-python classifi_main.py --model resnet18
 
 #run segmentation
 python seg_main.py
 
 # khi triển khai trên Docker để chạy UI App dự đoán thì file docker tự kích hoạt, chạy Local thì run code sau
 streamlit run .\app.py
-```
-
-Huấn luyện mô hình Mobinet
-
-```bash
-python mobilenet_train_enrnptys.py --train_dir C:/TRAIN/Deep Learning/vietnamese-foods/Images/Train --num_epochs 100 --batch_size 32 --model_path /models/MTL-MobileNet.pth
 ```
 
 Kiểm tra mô hình Mobinet

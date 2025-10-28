@@ -32,6 +32,7 @@ class simpleCNN(nn.Module):
     self.block2 = ConvReluBn(128, 256)#112
     self.block3 = ConvReluBn(256, 512)#56
     self.block4 = ConvReluBn(512, 512)#28
+    
     self.maxpool = nn.MaxPool2d(2)
     self.out = nn.Sequential(
       nn.Linear(512*7*7, 128),

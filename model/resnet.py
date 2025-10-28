@@ -306,7 +306,7 @@ def resnet18(pretrained=False, progress=True, **kwargs):
     )
 
     # model.fc = nn.Linear(512, kwargs['num_classes'])
-    model.fc = nn.Linear(512, 7)
+    model.fc = nn.Linear(512, 33)
     return model
 
 

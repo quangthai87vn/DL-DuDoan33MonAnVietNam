@@ -118,7 +118,7 @@ def vgg16_bn(pretrained = True, batch_norm =True):
     nn.Linear(4096, 4096),
     nn.ReLU(True),
     nn.Dropout(),
-    nn.Linear(4096, 30),
+    nn.Linear(4096, 33),
     )
     return model
 
@@ -132,7 +132,7 @@ def vgg19(pretrained = True, batch_norm = False):
     nn.Linear(4096, 4096),
     nn.ReLU(True),
     nn.Dropout(),
-    nn.Linear(4096, 30),
+    nn.Linear(4096, 33),
     )
     return model
 
@@ -146,7 +146,7 @@ def vgg19_bn(pretrained = True, batch_norm = True):
     nn.Linear(4096, 4096),
     nn.ReLU(True),
     nn.Dropout(),
-    nn.Linear(4096, 30),
+    nn.Linear(4096, 33),
     )
     return model
 
@@ -161,6 +161,6 @@ def vgg16(pretrained = False, batch_norm =False):
     nn.Linear(4096, 4096),
     nn.ReLU(True),
     nn.Dropout(),
-    nn.Linear(4096, 30),
+    nn.Linear(4096, 33),
     )
     return model
