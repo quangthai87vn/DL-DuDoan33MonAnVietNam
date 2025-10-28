@@ -31,7 +31,7 @@ def build_loaders(batch_size=32, workers=_WORKER):
 def build_model(name: str, num_classes: int):
     name = name.lower()
     #if name == "cnn":
-        #return miniVGG()                                 # đầu ra 33 lớp viết sẵn trong cnn.py :contentReference[oaicite:1]{index=1}
+        #return miniVGG()                              # đầu ra 33 lớp viết sẵn trong cnn.py :contentReference[oaicite:1]{index=1}
     if name == "mtl-cnn":
         return mtl_cnn_v1(num_classes=num_classes)     # dùng factory ở trên
     elif name == "vgg16":
@@ -49,7 +49,7 @@ def build_model(name: str, num_classes: int):
     
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", choices=["mtl-cnn","mobilenet","vgg16","resnet18","mobilenetv4"], default="mobilenet",
+    parser.add_argument("--model", choices=["mtl-cnn","mobilenet","efficientnet_b0","vgg16","resnet18","mobilenetv4"], default="mobilenet",
                         help="Chọn mô hình để train")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=50)
@@ -66,7 +66,7 @@ def main():
     train_loader, valid_loader, test_loader = build_loaders(batch_size=args.batch_size, workers=_WORKER)
 
     name = args.model.lower()  # "cnn", "mobilenet", ...
-    pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mtl-mobilenetv4","resnet18":"mtl-resnet18"}.get(name, type(model).__name__)
+    pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mtl-mobilenetv4","efficientnet_b0":"mtl-efficientnet_b0","resnet18":"mtl-resnet18"}.get(name, type(model).__name__)
     setattr(model, "_export_name", pretty)   # gắn nhãn cho model trước khi train
    
     fit(model, train_loader, valid_loader, test_loader,

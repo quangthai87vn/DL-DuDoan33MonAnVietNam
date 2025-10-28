@@ -1,122 +1,147 @@
-# app.py
-# Streamlit inference cho miniVGG (PyTorch) với 30 món ăn VN
-
+# app.py — Streamlit: chọn checkpoint trong thư mục Models/ rồi dự đoán ảnh
 import io
-import os
+
+
 from pathlib import Path
 from typing import List, Tuple
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
 import streamlit as st
 
-# -----------------------------
-# 1) CẤU HÌNH
-# -----------------------------
-# Đường dẫn mặc định tới checkpoint .pt (sửa lại nếu cần)
-DEFAULT_CKPT = "checkpoints/classification_best.pt"
+# === các kiến trúc bạn có ===
+from model.mtl_cnn import mtl_cnn_v1
+from model.mobilenet_v4 import CustomMobileNetV4
+from model.efficientnet_b0 import CustomEfficientNetB0
 
-# Mapping 30 lớp THEO THỨ TỰ TRAIN (index 24 = Gỏi cuốn)
+MODELS_DIR = Path("Models")
+IMG_TYPES = ["png", "jpg", "jpeg", "bmp", "tif", "tiff", "webp"]
+
 CLASS_NAMES = [
-    "Bánh bèo", "Bánh bột lọc", "Bánh căn", "Bánh canh", "Bánh chưng",
-    "Bánh cuốn", "Bánh đúc", "Bánh giò", "Bánh khọt", "Bánh mì",
-    "Bánh pía", "Bánh tét", "Bánh tráng nướng", "Bánh xèo",
-    "Bún bò Huế", "Bún đậu mắm tôm", "Bún mắm", "Bún riêu",
-    "Bún thịt nướng", "Cá kho tộ", "Canh chua", "Cao lầu",
-    "Cháo lòng", "Cơm tấm", "Gỏi cuốn", "Hủ tiếu",
-    "Mì Quảng", "Nem chua", "Phở", "Xôi xéo"
+    "Bánh bèo","Bánh bột lọc","Bánh căn","Bánh canh","Bánh chưng",
+    "Bánh cuốn","Bánh đúc","Bánh giò","Bánh khọt","Bánh mì",
+    "Bánh pía","Bánh tét","Bánh tráng nướng","Bánh xèo",
+    "Bún bò Huế","Bún đậu mắm tôm","Bún mắm","Bún riêu",
+    "Bún thịt nướng","Cá kho tộ","Canh chua","Cao lầu",
+    "Cháo lòng","Cơm tấm","Gỏi cuốn","Hủ tiếu",
+    "Mì Quảng","Nem chua","Phở","Xôi xéo",
+    "banh_da_lon","banh_tieu","banh_trung_thu"
 ]
+NUM_CLASSES = len(CLASS_NAMES)
 
-# Tiền xử lý PHẢI KHỚP lúc train (224x224 cho miniVGG của bạn)
+# bạn train không normalize → giữ nguyên
 TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
 ])
 
-IMG_TYPES = ["png", "jpg", "jpeg", "bmp", "tif", "tiff", "webp"]
+def list_checkpoints(models_dir: Path) -> list[Path]:
+    models_dir.mkdir(parents=True, exist_ok=True)
+    return sorted([p for p in models_dir.iterdir()
+                   if p.is_file() and p.suffix.lower() in (".mtl", ".pt")])
 
+def guess_arch(ckpt_name: str) -> str:
+    n = ckpt_name.lower()
+    if "mobilenetv4" in n or "mobilev4" in n:
+        return "mobilenetv4"
+    if "efficientnet" in n or "_b0" in n:
+        return "efficientnet_b0"
+    return "mtl_cnn"
 
-# -----------------------------
-# 2) LOAD MODEL (cache)
-# -----------------------------
-@st.cache_resource(show_spinner=True)
-def load_model(ckpt_path: str):
-    # để import được model.cnn miniVGG khi chạy từ mọi chỗ
-    import sys
-    root = Path(".").resolve()
-    # nếu không tìm thấy folder model ở cwd, thử bò ngược vài cấp
-    for _ in range(6):
-        if (root / "model").exists():
-            break
-        root = root.parent
-    sys.path.insert(0, str(root))
+def _read_state_dict(ckpt_path: Path, device: str):
+    obj = torch.load(str(ckpt_path), map_location=device)
+    if isinstance(obj, dict) and "net" in obj:
+        state = obj["net"]
+    elif isinstance(obj, dict) and "state_dict" in obj:
+        state = obj["state_dict"]
+    else:
+        state = obj
+    new_state = {}
+    for k, v in state.items():
+        new_state[k[7:]] = v if k.startswith("module.") else v  # strip "module."
+    # nếu k không bắt đầu "module.", dòng trên vẫn giữ nguyên v
+    return { (k[7:] if k.startswith("module.") else k): v for k, v in state.items() }
 
-    from model.cnn import miniVGG  # <- đúng kiến trúc đã train
+def build_model_by_arch(arch: str, num_classes: int) -> nn.Module:
+    if arch == "mtl_cnn":
+        return mtl_cnn_v1(num_classes=num_classes)
+    if arch == "mobilenetv4":
+        return CustomMobileNetV4(num_classes=num_classes, pretrained=False)
+    if arch == "efficientnet_b0":
+        return CustomEfficientNetB0(num_classes=num_classes, pretrained=False)
+    raise ValueError(f"Unknown arch: {arch}")
 
+@st.cache_resource(show_spinner=False)
+def load_model_cached(ckpt_path: str, arch: str, num_classes: int):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = miniVGG().to(device).eval()
-
-    ckpt = torch.load(ckpt_path, map_location=device)
-    state_dict = ckpt["net"] if isinstance(ckpt, dict) and "net" in ckpt else ckpt
-    model.load_state_dict(state_dict)
+    model = build_model_by_arch(arch, num_classes).to(device).eval()
+    state = _read_state_dict(Path(ckpt_path), device)
+    try:
+        model.load_state_dict(state, strict=True)
+    except Exception:
+        missing, unexpected = model.load_state_dict(state, strict=False)
+        warn = []
+        if missing:    warn.append(f"missing: {len(missing)}")
+        if unexpected: warn.append(f"unexpected: {len(unexpected)}")
+        if warn: st.warning("Checkpoint không khớp hoàn toàn → dùng strict=False. " + " | ".join(warn))
     return model, device
 
 
-# -----------------------------
-# 3) DỰ ĐOÁN
-# -----------------------------
+
+
 @torch.no_grad()
-def predict_image(model: torch.nn.Module, device: str, image: Image.Image, topk: int = 3) -> Tuple[List[int], List[float]]:
-    x = TRANSFORM(image.convert("RGB")).unsqueeze(0).to(device)  # (1,C,H,W)
-    logits = model(x)                                           # (1, num_classes)
-    probs = F.softmax(logits, dim=1).squeeze(0)                 # (num_classes,)
+def predict_image(model: nn.Module, device: str, image: Image.Image, topk: int = 3):
+    x = TRANSFORM(image.convert("RGB")).unsqueeze(0).to(device)
+    probs = torch.softmax(model(x), dim=1).squeeze(0)
     k = min(topk, probs.numel())
     vals, idxs = torch.topk(probs, k)
     return idxs.tolist(), vals.tolist()
 
-
-# -----------------------------
-# 4) UI
-# -----------------------------
+# ================= UI =================
 st.set_page_config(page_title="DỰ ĐOÁN MÓN ĂN VN", page_icon="🍜", layout="wide")
-st.title("🍜 DỰ ĐOÁN MÓN ĂN VN – BÙI QUANG THÁI")
+st.title("🍜 DỰ ĐOÁN MÓN ĂN VN – BÙI QUANG THÁI - 24752551")
 
 with st.sidebar:
     st.subheader("⚙️ Cấu hình")
-    ckpt_path = st.text_input("Đường dẫn checkpoint (.pt)", DEFAULT_CKPT)
+    ckpt_files = list_checkpoints(MODELS_DIR)
+    if not ckpt_files:
+        st.error(f"Không tìm thấy checkpoint trong `{MODELS_DIR}/`.")
+        st.stop()
+
+    # HIỂN THỊ TÊN FILE NGẮN, KHÔNG CÓ 'Models\'
+    name_to_path = {p.name: str(p) for p in ckpt_files}
+    sel_name = st.selectbox("Chọn file model ", list(name_to_path.keys()), index=0)
+    ckpt_path = name_to_path[sel_name]
+
+    detected_arch = guess_arch(sel_name)
+    st.caption(f"Kiến trúc suy luận: **{detected_arch}** (đổi tên file nếu muốn nhận diện khác)")
     topk = st.slider("Top-K hiển thị", 1, 5, 3)
     cols = st.slider("Số cột hiển thị", 1, 5, 3)
     show_prob = st.toggle("Hiện % xác suất", value=True)
-    st.caption("Nếu lỗi ‘không thấy model’, chạy app từ thư mục gốc dự án hoặc chỉnh lại đường dẫn ở trên.")
 
-# Tải model
-if not Path(ckpt_path).exists():
-    st.error(f"Không tìm thấy checkpoint: {ckpt_path}")
-    st.stop()
+# load model
+model, device = load_model_cached(ckpt_path, detected_arch, NUM_CLASSES)
+st.success(f"Model `{detected_arch}` đã sẵn sàng trên **{device.upper()}** • checkpoint: `{sel_name}`")
 
-model, device = load_model(ckpt_path)
-st.success(f"Model đã sẵn sàng trên **{device.upper()}** • checkpoint: `{ckpt_path}`")
-
-# Uploader: hỗ trợ nhiều ảnh
+# upload ảnh
 files = st.file_uploader("Chọn 1 hoặc nhiều ảnh", type=IMG_TYPES, accept_multiple_files=True)
 
-# Option: kéo-thả cả thư mục đã nén .zip
+
 zip_file = st.file_uploader("Hoặc chọn 1 file .zip chứa ảnh", type=["zip"], accept_multiple_files=False)
 
-# Gom tất cả ảnh cần dự đoán
-images_to_run = []
-
+images_to_run: list[tuple[str, Image.Image]] = []
 if files:
     for f in files:
         try:
-            img = Image.open(io.BytesIO(f.read())).convert("RGB")
-            images_to_run.append((f.name, img))
+            images_to_run.append((f.name, Image.open(io.BytesIO(f.read())).convert("RGB")))
         except Exception as e:
             st.warning(f"Ảnh lỗi `{f.name}`: {e}")
 
-# Giải nén zip (nếu có)
+
+
 if zip_file is not None:
     import zipfile, tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -125,17 +150,16 @@ if zip_file is not None:
         for p in Path(tmpdir).rglob("*"):
             if p.suffix.lower().strip(".") in IMG_TYPES:
                 try:
-                    img = Image.open(p).convert("RGB")
-                    images_to_run.append((str(p.name), img))
+                    images_to_run.append((p.name, Image.open(p).convert("RGB")))
                 except Exception as e:
                     st.warning(f"Ảnh lỗi `{p}`: {e}")
 
-# Nếu không có ảnh → demo hướng dẫn
+# chỉ dừng nếu SAU HAI KHỐI TRÊN vẫn chưa có ảnh
 if not images_to_run:
-    st.info("👉 Hãy kéo-thả ảnh (hoặc .zip) vào khung trên để dự đoán.")
+    st.info("👉 Kéo-thả ảnh (hoặc .zip) vào khung trên để dự đoán.")
     st.stop()
 
-# Hiển thị theo grid
+# hiển thị kết quả — SỬA THỤT LỀ & TĂNG CHỈ SỐ idx ĐÚNG VÒNG LẶP
 n = len(images_to_run)
 rows = (n + cols - 1) // cols
 idx = 0
@@ -146,21 +170,16 @@ for _ in range(rows):
             break
         name, pil_img = images_to_run[idx]
         with c[j]:
-            # dự đoán
+
+
             try:
-                top_idx, top_prob = predict_image(model, device, pil_img, topk=topk)
-                # render
-                # st.image(pil_img, use_container_width=True)
-                try:
-                    st.image(pil_img, use_container_width=True)   # Streamlit mới (>= ~1.25)
-                except TypeError:
-                    st.image(pil_img, use_column_width=True)      # Streamlit cũ
+                ids, probs = predict_image(model, device, pil_img, topk=topk)
+                st.image(pil_img, use_container_width=True)
                 if show_prob:
-                    lines = [f"**{k}. {CLASS_NAMES[k] if k < len(CLASS_NAMES) else 'class_'+str(k)}** — {p*100:.1f}%"
-                             for k, p in zip(top_idx, top_prob)]
+                    lines = [f"**{CLASS_NAMES[k] if k < NUM_CLASSES else 'class_'+str(k)}** — {p*100:.1f}%"
+                             for k, p in zip(ids, probs)]
                 else:
-                    lines = [f"**{k}. {CLASS_NAMES[k] if k < len(CLASS_NAMES) else 'class_'+str(k)}**"
-                             for k in top_idx]
+                    lines = [f"**{CLASS_NAMES[k] if k < NUM_CLASSES else 'class_'+str(k)}**" for k in ids]
                 st.markdown(f"**{name}**")
                 st.markdown(" • ".join(lines))
 
@@ -169,6 +188,9 @@ for _ in range(rows):
 
 
             except Exception as e:
+
+
                 st.error(f"Lỗi dự đoán `{name}`: {e}")
         idx += 1
+
 
