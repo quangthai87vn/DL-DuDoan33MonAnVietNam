@@ -12,8 +12,11 @@ from model.vggnet import vgg16                         # (nếu bạn đang dùn
 from model.resnet import resnet18                      # (nếu bạn đang dùng)
 from model.mtl_cnn import mtl_cnn_v1
 from model.mobilenet_v4 import CustomMobileNetV4
+from model.efficientnet_b0 import efficientnet_b0_model
 
 _WORKER=8 # VGA mạnh thì tăng lên
+_NUM_CLASSES=33
+
 def build_loaders(batch_size=32, workers=_WORKER):
     train_paths, train_labels, val_paths, val_labels, test_paths, test_labels = getAllDataset()
     train_dataset = FoodVNDs(train_paths, train_labels, transform=train_transform)
@@ -37,6 +40,10 @@ def build_model(name: str, num_classes: int):
         return resnet18(pretrained=True)
     elif name == "mobilenetv4":
         return CustomMobileNetV4(num_classes=num_classes, pretrained=True, freeze_backbone=False)
+    elif name == "efficientnet" or name == "efficientnet_b0":
+        return efficientnet_b0_model(num_classes=_NUM_CLASSES,
+                                  pretrained=True,          # fine-tune
+                                  freeze_backbone=False)    # True nếu muốn warmup
     else:
         raise ValueError(f"Unknown model: {name}")
     

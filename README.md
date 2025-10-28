@@ -18,10 +18,11 @@
 git clone https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam.git
 cd DL-DuDoan33MonAnVietNam
 # Huấn luyện mô hình CNN tự xây dựng
-python classifi_main.py --model cnn --epochs 20
+python classifi_main.py --model cnn --epochs 100 --batch_size 64
 python classifi_main.py --model mtl-cnn --epochs 100 --batch_size 64
-# Huấn luyện mô hình Mobinet
-python classifi_main.py --model mobilenetv4 --epochs 100 --batch_size 64
+
+# Huấn luyện mô hình efficientnet_b0
+python classifi_main.py --model efficientnet_b0 --epochs 100 --batch_size 64
 # Huấn luyện mô hình VGG16 / ResNet18 (nếu muốn)
 python classifi_main.py --model vgg16 --epochs 100
 python classifi_main.py --model resnet18 --epochs 100
@@ -33,7 +34,10 @@ python seg_main.py
 # khi triển khai trên Docker để chạy UI App dự đoán thì file docker tự kích hoạt, chạy Local thì run code sau
 streamlit run .\app.py
 ```
-
+# Huấn luyện và kiểm tra mô hình MobilenetV4
+```bash
+python classifi_main.py --model mobilenetv4 --epochs 100 --batch_size 64
+```
 Kiểm tra mô hình Mobinet
 ```bash
 python mobilenet_test.py --image_path C:\Users\Admin\OneDrive\Desktop\3.jpg --model_path C:\Users\Admin\OneDrive\DOCKER\Apps\DL-DuDoan33MonAnVietNam\Models\MTL-MobileNet.pth --label_path label.txt
