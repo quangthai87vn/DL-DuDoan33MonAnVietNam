@@ -1,0 +1,9 @@
+{
+  "run": "mtl-mobilenetv4-20251029-223758",
+  "params": 3240801,
+  "size_mb": 12.4464,
+  "latency_ms_avg": 3.447,
+  "latency_ms_p50": 3.404,
+  "latency_ms_p95": 3.86,
+  "fps": 290.08
+}
