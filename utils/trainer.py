@@ -7,6 +7,10 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import tqdm
 
+import csv, json, datetime
+from pathlib import Path
+import matplotlib.pyplot as plt
+
 # bật trace CUDA rõ ràng khi debug
 os.environ.setdefault("CUDA_LAUNCH_BLOCKING", "1")
 torch.backends.cudnn.benchmark = True
@@ -104,6 +108,134 @@ def _sanity_check_labels(outputs: torch.Tensor, labels: torch.Tensor):
         raise ValueError(f"❌ Label ngoài phạm vi [0..{C-1}]. "
                          f"Min={labels.min().item()}, Max={labels.max().item()}, C={C}")
     return labels
+
+
+
+# ==== LOGGING & RUN UTILITIES ====
+import csv, json, datetime
+from pathlib import Path
+import matplotlib.pyplot as plt
+
+def _now_tag():
+    return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+def create_run_dir(model_name: str, root="runs") -> Path:
+    run_dir = Path(root) / f"{model_name}-{_now_tag()}"
+    (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+    (run_dir / "images").mkdir(parents=True, exist_ok=True)
+    return run_dir
+
+def init_history():
+    return {"epoch": [], "train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
+
+def append_and_flush_history(history: dict, run_dir: Path):
+    # JSON (overwrite)
+    with open(run_dir / "history.json", "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    # CSV (append)
+    csv_path = run_dir / "history.csv"
+    write_header = not csv_path.exists()
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if write_header:
+            w.writerow(["epoch","train_loss","val_loss","train_acc","val_acc","lr"])
+        i = len(history["epoch"]) - 1
+        w.writerow([
+            history["epoch"][i],
+            f"{history['train_loss'][i]:.6f}",
+            f"{history['val_loss'][i]:.6f}",
+            f"{history['train_acc'][i]:.6f}",
+            f"{history['val_acc'][i]:.6f}",
+            f"{history['lr'][i]:.8f}",
+        ])
+
+def save_config(run_dir: Path, config: dict):
+    with open(run_dir / "config.json", "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+def plot_curves(run_dir: Path, history: dict, filename="loss_accuracy.png"):
+    ep = history["epoch"]
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].plot(ep, history["train_loss"], label="Train")
+    axs[0].plot(ep, history["val_loss"], label="Val")
+    axs[0].set_title("Loss theo Epoch"); axs[0].set_xlabel("Epoch"); axs[0].set_ylabel("Loss")
+    axs[0].legend(); axs[0].grid(alpha=.3)
+
+    axs[1].plot(ep, [x*100 for x in history["train_acc"]], label="Train")
+    axs[1].plot(ep, [x*100 for x in history["val_acc"]], label="Val")
+    axs[1].set_title("Accuracy (%) theo Epoch"); axs[1].set_xlabel("Epoch"); axs[1].set_ylabel("Accuracy (%)")
+    axs[1].legend(); axs[1].grid(alpha=.3)
+
+    plt.tight_layout()
+    out = run_dir / "images" / filename
+    plt.savefig(out, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+
+# ==== LOGGING & RUN UTILITIES ====
+
+
+def _now_tag():
+    return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+def create_run_dir(model_name: str, root="runs") -> Path:
+    run_dir = Path(root) / f"{model_name}-{_now_tag()}"
+    (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+    (run_dir / "images").mkdir(parents=True, exist_ok=True)
+    return run_dir
+
+def init_history():
+    return {"epoch": [], "train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
+
+def append_and_flush_history(history: dict, run_dir: Path):
+    # JSON (overwrite)
+    with open(run_dir / "history.json", "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    # CSV (append)
+    csv_path = run_dir / "history.csv"
+    write_header = not csv_path.exists()
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if write_header:
+            w.writerow(["epoch","train_loss","val_loss","train_acc","val_acc","lr"])
+        i = len(history["epoch"]) - 1
+        w.writerow([
+            history["epoch"][i],
+            f"{history['train_loss'][i]:.6f}",
+            f"{history['val_loss'][i]:.6f}",
+            f"{history['train_acc'][i]:.6f}",
+            f"{history['val_acc'][i]:.6f}",
+            f"{history['lr'][i]:.8f}",
+        ])
+
+def save_config(run_dir: Path, config: dict):
+    with open(run_dir / "config.json", "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+def plot_curves(run_dir: Path, history: dict, filename="loss_accuracy.png"):
+    ep = history["epoch"]
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+    axs[0].plot(ep, history["train_loss"], label="Train")
+    axs[0].plot(ep, history["val_loss"], label="Val")
+    axs[0].set_title("Loss theo Epoch"); axs[0].set_xlabel("Epoch"); axs[0].set_ylabel("Loss")
+    axs[0].legend(); axs[0].grid(alpha=.3)
+
+    axs[1].plot(ep, [x*100 for x in history["train_acc"]], label="Train")
+    axs[1].plot(ep, [x*100 for x in history["val_acc"]], label="Val")
+    axs[1].set_title("Accuracy (%) theo Epoch"); axs[1].set_xlabel("Epoch"); axs[1].set_ylabel("Accuracy (%)")
+    axs[1].legend(); axs[1].grid(alpha=.3)
+
+    plt.tight_layout()
+    out = run_dir / "images" / filename
+    plt.savefig(out, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
 
 def train(model, train_loader, optimizer, criterion, epoch, *,
           device: Optional[str]=None, wandb=None, wb=False) -> Dict[str,float]:
@@ -219,56 +351,6 @@ def save_weights(model: nn.Module, checkpoint_path: str) -> None:
     torch.save({"net": model.state_dict()}, checkpoint_path)
 '''
 def fit(model, train_loader, valid_loader, test_loader,
-        max_epochs: int=50, max_plateau_count: int=2, wb: bool=False, device: Optional[str]=None):
-    device = device or _device_from_model(model)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-2)
-    scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=2, factor=0.1, min_lr=0.0)
-
-    wandb = init_wandb(wb, model, criterion)
-    ckpt_path = _ckpt_path()
-    best_acc_val = -1.0; plateau_count = 0; epochs = 0
-
-    try:
-        while (plateau_count <= max_plateau_count) and (epochs < max_epochs):
-            epochs += 1
-            tr = train(model, train_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
-            val_acc = val(model, valid_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
-
-            if val_acc > best_acc_val:
-                best_acc_val = val_acc; plateau_count = 0; save_weights(model, ckpt_path)
-            else:
-                plateau_count += 1
-
-            loss_proxy = 100.0 - val_acc  # proxy cho val_loss
-            scheduler.step(loss_proxy)
-            print(f"[Epoch {epochs:03d}] train_loss={tr['loss']:.4f} train_acc={tr['acc']:.2f}% | "
-                  f"val_acc={val_acc:.2f}% | lr={get_lr(optimizer):.2e} | plateau={plateau_count}/{max_plateau_count}")
-    except KeyboardInterrupt:
-        print("\n⛔ Dừng training theo yêu cầu người dùng."); traceback.print_exc()
-    except Exception:
-        traceback.print_exc()
-   
-    #try:
-    #    state = torch.load(ckpt_path, map_location=device)
-    #    model.load_state_dict(state["net"])
-    #    print("Accuracy on Private Test:")
-    #    test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
-    #except Exception:
-    #    print("⚠️  Không tìm thấy/không load được checkpoint, test với trọng số hiện tại.")
-    #    traceback.print_exc()
-    #    test(model, test_loader, optimizer, criterion, epochs, device=device, wandb=wandb, wb=wb)
-    
-
-
-    if os.path.isfile(ckpt_path):
-        state = torch.load(ckpt_path, map_location=device)  # weights_only=True nếu dùng PyTorch mới
-        model.load_state_dict(state["net"])
-    else:
-        print("⚠️ Không tìm thấy checkpoint – train từ đầu.")
-'''
-
-def fit(model, train_loader, valid_loader, test_loader,
         max_epochs: int = 50,
         max_plateau_count: int = 2,
         wb: bool = False,
@@ -340,3 +422,112 @@ def fit(model, train_loader, valid_loader, test_loader,
     #    model.load_state_dict(state["net"])
     #else:
     #    print("⚠️ Không tìm thấy checkpoint – giữ trọng số hiện tại.")
+'''
+
+def fit(model, train_loader, valid_loader, test_loader,
+        max_epochs: int = 50,
+        max_plateau_count: int = 2,
+        wb: bool = False,
+        device: Optional[str] = None,
+        run_root: str = "runs",
+        run_meta: Optional[dict] = None):
+    """
+    Train/val với early-stop theo plateau, ghi lịch sử mỗi epoch (CSV + JSON),
+    lưu checkpoint (best/last), và vẽ biểu đồ learning curves.
+    Tất cả nằm trong runs/<model>-<timestamp>/
+    """
+    device = device or _device_from_model(model)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-2)
+    scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=2, factor=0.1, min_lr=0.0)
+
+    wandb = init_wandb(wb, model, criterion)
+
+    # === Tạo RUN DIR ===
+    model_name = getattr(model, "_export_name", type(model).__name__)
+    run_dir = create_run_dir(model_name, root=run_root)
+    print(f"[Run dir] {run_dir}")
+
+    # === Lưu config ban đầu (để reproducible) ===
+    cfg = {
+        "model": model_name,
+        "epochs": max_epochs,
+        "optimizer": str(optimizer),
+        "scheduler": str(scheduler),
+        "device": str(device)
+    }
+    if run_meta:
+        cfg.update(run_meta)  # batch_size, img_size, num_classes, data dirs...
+    save_config(run_dir, cfg)
+
+    # === Chuẩn bị lịch sử + ckpt path ===
+    history = init_history()
+    best_val_acc = -1.0
+    plateau_count = 0
+    epochs = 0
+
+    ckpt_last = run_dir / "checkpoints" / "last.mtl"
+    ckpt_best = run_dir / "checkpoints" / "best.mtl"
+
+    try:
+        while (plateau_count <= max_plateau_count) and (epochs < max_epochs):
+            epochs += 1
+
+            tr = train(model, train_loader, optimizer, criterion, epochs,
+                       device=device, wandb=wandb, wb=wb)
+
+            val_acc = val(model, valid_loader, optimizer, criterion, epochs,
+                          device=device, wandb=wandb, wb=wb)
+
+            # === Scheduler step theo proxy (100 - val_acc) ===
+            loss_proxy = 100.0 - val_acc
+            scheduler.step(loss_proxy)
+
+            # === cập nhật lịch sử ===
+            history["epoch"].append(epochs)
+            history["train_loss"].append(float(tr["loss"]))
+            history["val_loss"].append(float(loss_proxy if isinstance(loss_proxy, (int,float)) else 0.0))  # nếu bạn có val_loss chuẩn, thay bằng biến đó
+            history["train_acc"].append(float(tr["acc"]/100.0))
+            history["val_acc"].append(float(val_acc/100.0))
+            history["lr"].append(float(get_lr(optimizer)))
+            append_and_flush_history(history, run_dir)
+
+            # === checkpoint last ===
+            torch.save({
+                "net": model.state_dict(),
+                "epoch": epochs,
+                "best_val_acc": best_val_acc,
+                "history_csv": str(run_dir / "history.csv"),
+                "config_json": str(run_dir / "config.json"),
+            }, ckpt_last)
+
+            # === checkpoint best ===
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                torch.save({
+                    "net": model.state_dict(),
+                    "epoch": epochs,
+                    "best_val_acc": best_val_acc,
+                    "history_csv": str(run_dir / "history.csv"),
+                    "config_json": str(run_dir / "config.json"),
+                }, ckpt_best)
+                print(f"💾 Saved BEST checkpoint: {ckpt_best.name} (val_acc={val_acc:.2f}%)")
+            else:
+                plateau_count += 1
+
+            print(f"📊 Epoch {epochs}/{max_epochs} | "
+                  f"Train Loss={tr['loss']:.4f} Acc={tr['acc']:.2f}% | "
+                  f"Val Acc={val_acc:.2f}% | LR={get_lr(optimizer):.2e} | "
+                  f"Plateau {plateau_count}/{max_plateau_count}")
+
+    except KeyboardInterrupt:
+        print("\n⛔ Dừng training theo yêu cầu người dùng.")
+    except Exception:
+        traceback.print_exc()
+
+    # === Vẽ biểu đồ cuối ===
+    plot_curves(run_dir, history, filename="loss_accuracy.png")
+    print("✅ Đã lưu biểu đồ:", run_dir / "images" / "loss_accuracy.png")
+    print("✅ Best Val Acc:", f"{best_val_acc:.2f}%")
+    print("✅ Best ckpt   :", ckpt_best)
+    print("✅ Last ckpt   :", ckpt_last)

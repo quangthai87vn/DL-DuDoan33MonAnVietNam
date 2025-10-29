@@ -69,10 +69,32 @@ def main():
     pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mtl-mobilenetv4","efficientnet_b0":"mtl-efficientnet_b0","resnet18":"mtl-resnet18"}.get(name, type(model).__name__)
     setattr(model, "_export_name", pretty)   # gắn nhãn cho model trước khi train
    
+    #fit(model, train_loader, valid_loader, test_loader,
+    #    max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device)
+    
+
+     # === thêm meta để lưu vào config.json trong runs/ ===
+    run_meta = {
+        "batch_size": args.batch_size,
+        "epochs": args.epochs,
+        "num_classes": NUM_CLASSES,
+        # bạn có thể bổ sung img_size, mean/std nếu có:
+        # "img_size": 224,
+        # "normalize": {"mean":[0.485,0.456,0.406],"std":[0.229,0.224,0.225]}
+    }
+
     fit(model, train_loader, valid_loader, test_loader,
-        max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device)
+        max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device,
+        run_root="runs", run_meta=run_meta)
+
+
 
 if __name__ == "__main__":
     import torch.multiprocessing as mp    
     mp.freeze_support()
     main()
+
+
+   
+
+   
