@@ -34,6 +34,8 @@ def build_model(name: str, num_classes: int):
         #return miniVGG()                              # đầu ra 33 lớp viết sẵn trong cnn.py :contentReference[oaicite:1]{index=1}
     if name == "mtl-cnn":
         return mtl_cnn_v1(num_classes=num_classes)     # dùng factory ở trên
+    elif name == "cnn":
+        return miniVGG()
     elif name == "vgg16":
         return vgg16(pretrained=True)
     elif name == "resnet18":
@@ -49,7 +51,7 @@ def build_model(name: str, num_classes: int):
     
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", choices=["mtl-cnn","mobilenet","efficientnet_b0","vgg16","resnet18","mobilenetv4"], default="mobilenet",
+    parser.add_argument("--model", choices=["cnn","mtl-cnn","mobilenet","efficientnet_b0","vgg16","resnet18","mobilenetv4"], default="mobilenet",
                         help="Chọn mô hình để train")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=50)

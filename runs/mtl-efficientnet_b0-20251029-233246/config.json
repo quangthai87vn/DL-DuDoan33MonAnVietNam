@@ -1,9 +1,0 @@
-{
-  "model": "mtl-efficientnet_b0",
-  "epochs": 100,
-  "optimizer": "Adam (\nParameter Group 0\n    amsgrad: False\n    betas: (0.9, 0.999)\n    capturable: False\n    differentiable: False\n    eps: 1e-08\n    foreach: None\n    fused: None\n    lr: 0.0001\n    maximize: False\n    weight_decay: 0.01\n)",
-  "scheduler": "<torch.optim.lr_scheduler.ReduceLROnPlateau object at 0x000001BE1DFE3E20>",
-  "device": "cuda",
-  "batch_size": 64,
-  "num_classes": 33
-}
