@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from utils.processing import *                         # transforms + Name_food + getAllDataset
 from utils.vnfood_ds import *                          # FoodVNDs (giữ nguyên như cũ)
 from utils.trainer import fit                          # vòng train/val/test chuẩn
-from model.cnn import miniVGG                          # CNN gốc
+from model.cnn import miniCNN                          # CNN gốc
 from model.vggnet import vgg16                         # (nếu bạn đang dùng)
 from model.resnet import resnet18                      # (nếu bạn đang dùng)
 from model.mtl_cnn import mtl_cnn_v1
@@ -35,7 +35,7 @@ def build_model(name: str, num_classes: int):
     if name == "mtl-cnn":
         return mtl_cnn_v1(num_classes=num_classes)     # dùng factory ở trên
     elif name == "cnn":
-        return miniVGG()
+        return miniCNN()
     elif name == "vgg16":
         return vgg16(pretrained=True)
     elif name == "resnet18":
@@ -71,11 +71,7 @@ def main():
     pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mtl-mobilenetv4","efficientnet_b0":"mtl-efficientnet_b0","resnet18":"mtl-resnet18"}.get(name, type(model).__name__)
     setattr(model, "_export_name", pretty)   # gắn nhãn cho model trước khi train
    
-    #fit(model, train_loader, valid_loader, test_loader,
-    #    max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device)
-    
-
-     # === thêm meta để lưu vào config.json trong runs/ ===
+    # === thêm meta để lưu vào config.json trong runs/ ===
     run_meta = {
         "batch_size": args.batch_size,
         "epochs": args.epochs,

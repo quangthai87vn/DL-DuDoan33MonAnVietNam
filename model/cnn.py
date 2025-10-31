@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+NUM_CLASS = 33
+
 class ConvReluBn(nn.Module):
   def __init__(self, in_channels, out_channels):
     super(ConvReluBn, self).__init__()
@@ -37,7 +39,7 @@ class simpleCNN(nn.Module):
     self.out = nn.Sequential(
       nn.Linear(512*7*7, 128),
       nn.ReLU(inplace = True),
-      nn.Linear(128,33)
+      nn.Linear(128,NUM_CLASS)
     )
     if init_weight:
       for m in self.modules():
@@ -63,9 +65,9 @@ class simpleCNN(nn.Module):
     
     return out
     
-class miniVGG(nn.Module):
+class miniCNN(nn.Module):
   def __init__(self, init_weight = True):
-    super(miniVGG, self).__init__()
+    super(miniCNN, self).__init__()
 
     self.block1 = ConvReluBn(3,64)
     self.block2 = ConvReluBn(64,64)
@@ -85,7 +87,7 @@ class miniVGG(nn.Module):
     self.out = nn.Sequential(
       nn.Linear(512*7*7, 128),
       nn.ReLU(inplace = True),
-      nn.Linear(128,33)
+      nn.Linear(128,NUM_CLASS)
     )
 
     if init_weight:
