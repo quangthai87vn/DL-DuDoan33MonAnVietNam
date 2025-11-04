@@ -15,7 +15,7 @@ from typing import Callable, List, Tuple
 
 
 
-ROOT = "C:/TRAIN/Deep Learning/vietnamese-foods/Images"   # <== đổi nếu cần
+ROOT = "D:/AI DATASET/vietnamese-foods/Images"   # <== đổi nếu cần
 root_train = f"{ROOT}/Train"
 root_val   = f"{ROOT}/Validate"
 root_test  = f"{ROOT}/Test"

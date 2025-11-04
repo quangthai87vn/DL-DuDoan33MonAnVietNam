@@ -15,8 +15,10 @@
 
 ## Cách chạy Project :question:
 ```python
+
 git clone https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam.git
 cd DL-DuDoan33MonAnVietNam
+pip install -r requirements.txt
 # Huấn luyện mô hình CNN tự xây dựng
 python classifi_main.py --model cnn --epochs 100 --batch_size 64
 python classifi_main.py --model mtl-cnn --epochs 100 --batch_size 64
