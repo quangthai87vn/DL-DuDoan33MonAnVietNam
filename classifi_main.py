@@ -35,11 +35,11 @@ def build_model(name: str, num_classes: int):
     if name == "mtl-cnn":
         return mtl_cnn_v1(num_classes=num_classes)     # dùng factory ở trên
     elif name == "cnn":
-        return miniCNN()
+        return miniCNN(num_classes=num_classes)
     elif name == "vgg16":
         return vgg16(pretrained=True)
     elif name == "resnet18":
-        return resnet18(pretrained=True)
+        return resnet18(num_classes=num_classes, pretrained=True)
     elif name == "mobilenetv4":
         return CustomMobileNetV4(num_classes=num_classes, pretrained=True, freeze_backbone=False)
     elif name == "efficientnet" or name == "efficientnet_b0":

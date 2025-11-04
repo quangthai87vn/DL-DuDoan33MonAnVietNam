@@ -110,7 +110,7 @@ def _sanity_check_labels(outputs: torch.Tensor, labels: torch.Tensor):
     return labels
 
 
-
+'''
 # ==== LOGGING & RUN UTILITIES ====
 import csv, json, datetime
 from pathlib import Path
@@ -172,7 +172,7 @@ def plot_curves(run_dir: Path, history: dict, filename="loss_accuracy.png"):
     out = run_dir / "images" / filename
     plt.savefig(out, dpi=220, bbox_inches="tight")
     plt.close(fig)
-
+'''
 
 
 # ==== LOGGING & RUN UTILITIES ====

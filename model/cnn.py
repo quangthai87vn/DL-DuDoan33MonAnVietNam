@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-NUM_CLASS = 33
+
 
 class ConvReluBn(nn.Module):
   def __init__(self, in_channels, out_channels):
@@ -20,53 +20,10 @@ class ConvReluBn(nn.Module):
     out = self.relu(out)
 
     return out
-'''
-Đây là một mạng CNN phân loại ảnh tự xây, dùng cho bài toán nhận diện món ăn Việt Nam (33 lớp).
-Cấu trúc gồm 5 khối convolution chính → giảm kích thước dần bằng MaxPooling → Flatten → 2 lớp fully-connected.
-'''
-class simpleCNN(nn.Module):
-  def __init__(self, init_weight = True):
-    super(simpleCNN, self).__init__()
-    
-    self.conv = nn.Conv2d(3, 64, kernel_size = 3, padding = 1)
-    self.relu = nn.ReLU(inplace = True)
-    self.block1 = ConvReluBn(64, 128)#224
-    self.block2 = ConvReluBn(128, 256)#112
-    self.block3 = ConvReluBn(256, 512)#56
-    self.block4 = ConvReluBn(512, 512)#28
-    
-    self.maxpool = nn.MaxPool2d(2)
-    self.out = nn.Sequential(
-      nn.Linear(512*7*7, 128),
-      nn.ReLU(inplace = True),
-      nn.Linear(128,NUM_CLASS)
-    )
-    if init_weight:
-      for m in self.modules():
-          if isinstance(m, nn.Conv2d):
-              nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
-          elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
-              nn.init.constant_(m.weight, 1)
-              nn.init.constant_(m.bias, 0)
-  def forward(self, x):
-    out = self.conv(x)   
-    out = self.relu(out)
-    out = self.maxpool(out)
-    out = self.block1(out)
-    out = self.maxpool(out)
-    out = self.block2(out)
-    out = self.maxpool(out)
-    out = self.block3(out)
-    out = self.maxpool(out)
-    out = self.block4(out)
-    out = self.maxpool(out)
-    out = torch.flatten(out, 1) 
-    out = self.out(out)
-    
-    return out
+  
     
 class miniCNN(nn.Module):
-  def __init__(self, init_weight = True):
+  def __init__(self,num_classes: int, init_weight = True):
     super(miniCNN, self).__init__()
 
     self.block1 = ConvReluBn(3,64)
@@ -87,7 +44,7 @@ class miniCNN(nn.Module):
     self.out = nn.Sequential(
       nn.Linear(512*7*7, 128),
       nn.ReLU(inplace = True),
-      nn.Linear(128,NUM_CLASS)
+      nn.Linear(128,num_classes)
     )
 
     if init_weight:
@@ -122,3 +79,8 @@ class miniCNN(nn.Module):
 
     return out
   
+'''
+def miniCNN(num_classes: int) -> nn.Module:
+    """Factory để classifi_main gọi giống cnn.miniVGG."""
+    return _miniCNN(num_classes=num_classes)
+'''
