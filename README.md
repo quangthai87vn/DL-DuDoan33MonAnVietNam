@@ -21,10 +21,14 @@ cd DL-DuDoan33MonAnVietNam
 pip install -r requirements.txt
 # Huấn luyện mô hình CNN tự xây dựng
 python classifi_main.py --model cnn --epochs 100 --batch_size 64
-python classifi_main.py --model mtl-cnn --epochs 100 --batch_size 64
+python classifi_main.py --model mtl_cnn --epochs 100 --batch_size 64
 
 # Huấn luyện mô hình efficientnet_b0
 python classifi_main.py --model efficientnet_b0 --epochs 100 --batch_size 64
+
+# Huấn luyện mô hình mtl-efficientnet_b0
+python classifi_main.py --model mtl_efficientnet_b0 --epochs 100 --batch_size 64
+
 # Huấn luyện mô hình VGG16 / ResNet18 (nếu muốn)
 python classifi_main.py --model vgg16 --epochs 100
 python classifi_main.py --model resnet18 --epochs 100
@@ -47,6 +51,18 @@ python mobilenet_test.py --image_path C:\Users\Admin\OneDrive\Desktop\3.jpg --mo
 
 
 
+
+
+python train_finetune_efficientnet.py \
+  --data_dir "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods" \
+  --epochs 21000 \
+  --batch_size 32 \
+  --img_size 256 \
+  --freeze_until 0 \
+  --mixed_precision \
+  --outdir runs/effb0_256
+
+ 
 
 
 
@@ -79,7 +95,7 @@ python mobilenet_test.py --image_path C:\Users\Admin\OneDrive\Desktop\3.jpg --mo
 ![image](https://github.com/Harly-1506/4VNfoods-Deep-learning/assets/86733695/6d772489-a7a4-47b6-b6e9-5fe7da503fd3)
 
 ## Demo:
-
+- Demo trong VSCode: streamlit run app.py
 - Chương trình demo bạn có thể theo dõi trong kho lưu trữ này: [Demo](http://mtltechnology.ddns.net:1111/)
 ___
 

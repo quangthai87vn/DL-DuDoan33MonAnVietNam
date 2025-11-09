@@ -13,6 +13,9 @@ from model.resnet import resnet18                      # (nếu bạn đang dùn
 from model.mtl_cnn import mtl_cnn_v1
 from model.mobilenet_v4 import CustomMobileNetV4
 from model.efficientnet_b0 import efficientnet_b0_model
+from model.mtl_efficientnet_b0 import mtl_efficientnet_b0_model
+from trainer_finetune import FineTuneTrainer
+
 
 _WORKER=8 # VGA mạnh thì tăng lên
 _NUM_CLASSES=33
@@ -45,13 +48,17 @@ def build_model(name: str, num_classes: int):
     elif name == "efficientnet" or name == "efficientnet_b0":
         return efficientnet_b0_model(num_classes=_NUM_CLASSES,
                                   pretrained=True,          # fine-tune
-                                  freeze_backbone=False)    # True nếu muốn warmup
+                                  freeze_backbone=False)    # True nếu muốn warmup   
+    elif name == "mtl_efficientnet_b0":
+        return mtl_efficientnet_b0_model(num_classes=_NUM_CLASSES,
+                                pretrained=True,
+                                freeze_backbone=True)
     else:
         raise ValueError(f"Unknown model: {name}")
     
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", choices=["cnn","mtl-cnn","mobilenet","efficientnet_b0","vgg16","resnet18","mobilenetv4"], default="mobilenet",
+    parser.add_argument("--model", choices=["cnn","mtl_cnn","mobilenet","efficientnet_b0","mtl_efficientnet_b0","vgg16","resnet18","mobilenetv4"], default="mobilenet",
                         help="Chọn mô hình để train")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=50)
@@ -68,7 +75,7 @@ def main():
     train_loader, valid_loader, test_loader = build_loaders(batch_size=args.batch_size, workers=_WORKER)
 
     name = args.model.lower()  # "cnn", "mobilenet", ...
-    pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mtl-mobilenetv4","efficientnet_b0":"mtl-efficientnet_b0","resnet18":"mtl-resnet18"}.get(name, type(model).__name__)
+    pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mobilenetv4","efficientnet_b0":"efficientnet_b0","mtl_efficientnet_b0":"mtl_efficientnet_b0","resnet18":"resnet18"}.get(name, type(model).__name__)
     setattr(model, "_export_name", pretty)   # gắn nhãn cho model trước khi train
    
     # === thêm meta để lưu vào config.json trong runs/ ===
