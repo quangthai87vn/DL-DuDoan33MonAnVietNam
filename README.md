@@ -26,7 +26,7 @@ python classifi_main.py --model mtl_cnn --epochs 100 --batch_size 64
 # Huấn luyện mô hình efficientnet_b0
 python classifi_main.py --model efficientnet_b0 --epochs 100 --batch_size 64
 
-# Huấn luyện mô hình mtl-efficientnet_b0
+# Huấn luyện mô hình mtl-efficientnet_b0: 87.48%
 python classifi_main.py --model mtl_efficientnet_b0 --epochs 100 --batch_size 64
 
 # Huấn luyện mô hình VGG16 / ResNet18 (nếu muốn)

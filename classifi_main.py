@@ -14,7 +14,7 @@ from model.mtl_cnn import mtl_cnn_v1
 from model.mobilenet_v4 import CustomMobileNetV4
 from model.efficientnet_b0 import efficientnet_b0_model
 from model.mtl_efficientnet_b0 import mtl_efficientnet_b0_model
-from trainer_finetune import FineTuneTrainer
+#from trainer_finetune import FineTuneTrainer
 
 
 _WORKER=8 # VGA mạnh thì tăng lên
@@ -35,7 +35,7 @@ def build_model(name: str, num_classes: int):
     name = name.lower()
     #if name == "cnn":
         #return miniVGG()                              # đầu ra 33 lớp viết sẵn trong cnn.py :contentReference[oaicite:1]{index=1}
-    if name == "mtl-cnn":
+    if name == "mtl_cnn":
         return mtl_cnn_v1(num_classes=num_classes)     # dùng factory ở trên
     elif name == "cnn":
         return miniCNN(num_classes=num_classes)
@@ -75,7 +75,7 @@ def main():
     train_loader, valid_loader, test_loader = build_loaders(batch_size=args.batch_size, workers=_WORKER)
 
     name = args.model.lower()  # "cnn", "mobilenet", ...
-    pretty = {"mtl-cnn":"mtl-cnn","mobilenetv4":"mobilenetv4","efficientnet_b0":"efficientnet_b0","mtl_efficientnet_b0":"mtl_efficientnet_b0","resnet18":"resnet18"}.get(name, type(model).__name__)
+    pretty = {"mtl_cnn":"mtl_cnn","mobilenetv4":"mobilenetv4","efficientnet_b0":"efficientnet_b0","mtl_efficientnet_b0":"mtl_efficientnet_b0","resnet18":"resnet18"}.get(name, type(model).__name__)
     setattr(model, "_export_name", pretty)   # gắn nhãn cho model trước khi train
    
     # === thêm meta để lưu vào config.json trong runs/ ===
@@ -88,9 +88,16 @@ def main():
         # "normalize": {"mean":[0.485,0.456,0.406],"std":[0.229,0.224,0.225]}
     }
 
-    fit(model, train_loader, valid_loader, test_loader,
-        max_epochs=args.epochs, max_plateau_count=15, wb=False, device=device,
-        run_root="runs", run_meta=run_meta)
+    fit(model, 
+        train_loader, 
+        valid_loader, 
+        test_loader,
+        max_epochs=args.epochs, 
+        max_plateau_count=15, 
+        wb=False, 
+        device=device,
+        run_root="runs", 
+        run_meta=run_meta)
 
 
 

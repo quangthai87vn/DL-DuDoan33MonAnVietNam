@@ -110,69 +110,8 @@ def _sanity_check_labels(outputs: torch.Tensor, labels: torch.Tensor):
     return labels
 
 
-'''
-# ==== LOGGING & RUN UTILITIES ====
-import csv, json, datetime
-from pathlib import Path
-import matplotlib.pyplot as plt
 
-def _now_tag():
-    return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-def create_run_dir(model_name: str, root="runs") -> Path:
-    run_dir = Path(root) / f"{model_name}-{_now_tag()}"
-    (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
-    (run_dir / "images").mkdir(parents=True, exist_ok=True)
-    return run_dir
-
-def init_history():
-    return {"epoch": [], "train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
-
-def append_and_flush_history(history: dict, run_dir: Path):
-    # JSON (overwrite)
-    with open(run_dir / "history.json", "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
-
-    # CSV (append)
-    csv_path = run_dir / "history.csv"
-    write_header = not csv_path.exists()
-    with open(csv_path, "a", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        if write_header:
-            w.writerow(["epoch","train_loss","val_loss","train_acc","val_acc","lr"])
-        i = len(history["epoch"]) - 1
-        w.writerow([
-            history["epoch"][i],
-            f"{history['train_loss'][i]:.6f}",
-            f"{history['val_loss'][i]:.6f}",
-            f"{history['train_acc'][i]:.6f}",
-            f"{history['val_acc'][i]:.6f}",
-            f"{history['lr'][i]:.8f}",
-        ])
-
-def save_config(run_dir: Path, config: dict):
-    with open(run_dir / "config.json", "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
-
-def plot_curves(run_dir: Path, history: dict, filename="loss_accuracy.png"):
-    ep = history["epoch"]
-    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-
-    axs[0].plot(ep, history["train_loss"], label="Train")
-    axs[0].plot(ep, history["val_loss"], label="Val")
-    axs[0].set_title("Loss theo Epoch"); axs[0].set_xlabel("Epoch"); axs[0].set_ylabel("Loss")
-    axs[0].legend(); axs[0].grid(alpha=.3)
-
-    axs[1].plot(ep, [x*100 for x in history["train_acc"]], label="Train")
-    axs[1].plot(ep, [x*100 for x in history["val_acc"]], label="Val")
-    axs[1].set_title("Accuracy (%) theo Epoch"); axs[1].set_xlabel("Epoch"); axs[1].set_ylabel("Accuracy (%)")
-    axs[1].legend(); axs[1].grid(alpha=.3)
-
-    plt.tight_layout()
-    out = run_dir / "images" / filename
-    plt.savefig(out, dpi=220, bbox_inches="tight")
-    plt.close(fig)
-'''
 
 
 # ==== LOGGING & RUN UTILITIES ====
