@@ -146,7 +146,7 @@ def get_path_images_labels(path):
       labels.append(label)
   return images, labels
 
-
+'''
 def getAllDataset():
   train_paths, train_labels = get_path_images_labels(root_train)
   val_paths, val_labels = get_path_images_labels(root_val)
@@ -158,6 +158,29 @@ def getAllDataset():
   test_labels = lb.fit_transform(test_labels)
 
   return train_paths, train_labels, val_paths, val_labels, test_paths, test_labels
+
+'''
+
+
+def getAllDataset():
+    train_paths, train_labels = get_path_images_labels(root_train)
+    val_paths,   val_labels   = get_path_images_labels(root_val)
+    test_paths,  test_labels  = get_path_images_labels(root_test)
+
+    lb = LabelEncoder()
+    train_labels = lb.fit_transform(train_labels)
+    val_labels   = lb.transform(val_labels)
+    test_labels  = lb.transform(test_labels)
+
+    # Lưu mapping để dùng lại khi inference/đánh giá
+    class_names = list(lb.classes_)
+    os.makedirs("./runs_meta", exist_ok=True)
+    with open("./runs_meta/class_names.json", "w", encoding="utf-8") as f:
+        import json
+        json.dump(class_names, f, ensure_ascii=False, indent=2)
+
+    return train_paths, train_labels, val_paths, val_labels, test_paths, test_labels
+
 
 
 def plot_images(train_loader):
