@@ -5,17 +5,12 @@
 ## Tập dữ liệu :egg: 
 - Dữ liệu 30 món ăn được lấy từ tập dữ liệu [30VNFoods](https://www.kaggle.com/datasets/quandang/vietnamese-foods) và thêm 3 món ăn mới bao gồm : Bánh da lợn, bánh tiêu, bánh trung thu
 
-   ![Example](https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam/blob/main/images/image.png "This is a sample image.")
-
-
 ## Mô hình
 - Tôi sử dụng nhiều mô hình khác nhau, từ MLP đến CNN đơn giản, miniVGG. Các mô hình được đào tạo trước như VGG16, ResNet18.
 - Đối với bài toán Phân đoạn, tôi sử dụng cấu trúc Unet với các bộ mã hóa là các mô hình được đào tạo trước để có được kết quả tốt nhất.
 - Tôi sử dụng Wandb để theo dõi và so sánh các thí nghiệm: [Classification](https://wandb.ai/harly/classifi_FoodVN?workspace=user-harly), [Segmentation](https://wandb.ai/harly/SegVNFood?workspace=user-harly)
 
-
-
-## Cách chạy tre6n Docker
+## Cách chạy  Docker
 ```python
 docker stop vnfoods-app 
 docker rm vnfoods-app 
@@ -29,10 +24,8 @@ docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
 ```
 
 
-
 ## Cách chạy Project :question:
 ```python
-
 git clone https://github.com/quangthai87vn/DL-DuDoan33MonAnVietNam.git
 cd DL-DuDoan33MonAnVietNam
 pip install -r requirements.txt
