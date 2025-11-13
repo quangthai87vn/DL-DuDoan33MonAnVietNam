@@ -34,6 +34,8 @@ python classifi_main.py --model vgg16 --epochs 100
 python classifi_main.py --model resnet18 --epochs 100
 
 
+
+
 #run segmentation
 python seg_main.py
 # khi triển khai trên Docker để chạy UI App dự đoán thì file docker tự kích hoạt, chạy Local thì run code sau
