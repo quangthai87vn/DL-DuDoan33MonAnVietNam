@@ -163,4 +163,8 @@ cython_debug/
 
 
 data/* 
-test/*
+test/*Jupyter/runs/
+runs/
+checkpoints/
+*.pt
+*.mtl
