@@ -13,6 +13,23 @@
 - Đối với bài toán Phân đoạn, tôi sử dụng cấu trúc Unet với các bộ mã hóa là các mô hình được đào tạo trước để có được kết quả tốt nhất.
 - Tôi sử dụng Wandb để theo dõi và so sánh các thí nghiệm: [Classification](https://wandb.ai/harly/classifi_FoodVN?workspace=user-harly), [Segmentation](https://wandb.ai/harly/SegVNFood?workspace=user-harly)
 
+
+
+## Cách chạy tre6n Docker
+```python
+docker stop vnfoods-app 
+docker rm vnfoods-app 
+sudo docker build -t vnfoods-app:latest .
+docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
+  -v "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:ro" \
+  -v "$PWD/Jupyter/runs:/app/Jupyter/runs:ro" \
+  -v "$PWD/Jupyter/images:/app/Jupyter/images:ro" \
+  -e DATA_DIR="/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images" \
+  vnfoods-app
+```
+
+
+
 ## Cách chạy Project :question:
 ```python
 
@@ -104,16 +121,7 @@ ___
 
 *Hãy cho tôi một ngôi sao :star: nếu bạn thấy nó hữu ích, cảm ơn*
 
-DOCKER BUILD
-docker stop vnfoods-app 
-docker rm vnfoods-app 
-sudo docker build -t vnfoods-app:latest .
-docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
-  -v "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:ro" \
-  -v "$PWD/Jupyter/runs:/app/Jupyter/runs:ro" \
-  -v "$PWD/Jupyter/images:/app/Jupyter/images:ro" \
-  -e DATA_DIR="/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images" \
-  vnfoods-app
+
 
 
 
