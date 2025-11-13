@@ -1,0 +1,29 @@
+name: vnfoods
+services:
+  vnfoods-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vnfoods-app
+    ports:
+      - "6789:6789"
+    volumes:
+      - ./webapps:/app/webapps:ro
+      - ./Jupyter/runs:/app/Jupyter/runs:ro
+      - ./Jupyter/images:/app/Jupyter/images:ro
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute, utility
+      - STREAMLIT_SERVER_PORT=8501
+    # Dòng cảnh báo tiếng Việt trong ảnh: Đặt đúng cấp của service (cùng level với 'environment/volumes/ports')
+    # Cấu hình GPU đúng theo spec mới:
+    device_requests: 
+      - driver: nvidia
+        count: -1 # -1 nghĩa là yêu cầu tất cả các GPU có sẵn (all GPU)
+        capabilities: ["gpu"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q0- http://localhost:6789/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

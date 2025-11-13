@@ -1,26 +1,22 @@
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
-
-# python + deps hệ thống
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv \
-    libgl1 libglib2.0-0 libsm6 libxrender1 libxext6 \
- && rm -rf /var/lib/apt/lists/*
+FROM python:3.10-slim
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip3 install --upgrade pip
 
-# CÀI TORCH CUDA (chọn đúng cu118/cu121 khớp với image)
-RUN pip3 install --no-cache-dir \
-  torch==2.2.2+cu121 torchvision==0.17.2+cu121 \
-  --index-url https://download.pytorch.org/whl/cu121
+# Cài thư viện hệ thống cơ bản
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git wget curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# cài các lib còn lại
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Cài pip & torch GPU + streamlit
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir streamlit matplotlib seaborn pandas scikit-learn pillow opencv-python-headless
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio
 
-COPY . .
+# Copy code của bạn vào container
+COPY ../webapps /app/webapps
+COPY ../model /app/model
+COPY ../Jupyter /app/Jupyter
 
-ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
-ENV STREAMLIT_SERVER_PORT=1111
-EXPOSE 1111
-CMD ["streamlit", "run", "app.py", "--server.port=1111", "--server.address=0.0.0.0"]
+EXPOSE 6789
+
+CMD ["streamlit", "run", "webapps/app.py", "--server.port=6789", "--server.address=0.0.0.0"]

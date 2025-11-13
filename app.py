@@ -17,6 +17,8 @@ from model.mobilenet_v4 import CustomMobileNetV4
 from model.efficientnet_b0 import CustomEfficientNetB0
 
 
+from model.mtl_efficientnet_b0 import mtl_efficientnet_b0_model
+
 # đặt ở đầu file sau imports
 from inspect import signature
 
@@ -94,6 +96,9 @@ def guess_arch(ckpt_name: str) -> str:
         return "mobilenetv4"
     if "efficientnet" in n or "_b0" in n:
         return "efficientnet_b0"
+
+    if "mtl_efficientnet_b0" in n:
+        return "mtl_efficientnet_b0"
     return "mtl_cnn"
 
 def _read_state_dict(ckpt_path: Path, device: str):
@@ -119,6 +124,14 @@ def build_model_by_arch(arch: str, num_classes: int) -> nn.Module:
         return CustomMobileNetV4(num_classes=num_classes, pretrained=False)
     if arch == "efficientnet_b0":
         return CustomEfficientNetB0(num_classes=num_classes, pretrained=False)
+    if arch == "mtl_efficientnet_b0":
+        return mtl_efficientnet_b0_model(num_classes=num_classes, pretrained=True, freeze_backbone=False)
+
+
+
+
+
+
     raise ValueError(f"Unknown arch: {arch}")
 
 @st.cache_resource(show_spinner=False)
