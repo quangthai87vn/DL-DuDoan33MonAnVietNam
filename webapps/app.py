@@ -20,6 +20,7 @@ import app_validatemodel as vm
 
 import app_predict as pr
 import app_trainmodel as tr   # <--- NEW
+import app_augment as ag
 from app_trainmodel import render_train_tab  
 TITLE = "Nhận diện 33 món ăn - Bùi Quang Thái - 24752551"
 
@@ -156,7 +157,7 @@ st.sidebar.caption("Thiết bị: **CUDA**" if device.type == "cuda" else "Thi�
 st.title(TITLE)
 with st.expander("📘 Giới thiệu & Hướng xử lý", expanded=False):
     st.markdown(
-        "- App gồm 4 bước theo pipeline: **Khai phá dữ liệu → Huấn luyện → Đánh giá → Dự đoán**.\n"
+        "- App gồm 5 bước theo pipeline: **Khai phá dữ liệu → Tăng cường dữ liệu → Huấn luyện mô hình → Đánh giá → Dự đoán**.\n"
         "- Checkpoint (best) chỉ nạp **một lần** và dùng chung giữa các tab."
     )
 
@@ -178,8 +179,9 @@ if st.session_state.get("NEED_RELOAD_CKPTS"):
 # ----- Router -----
 if menu == "📊 Khai phá dữ liệu":
     dm.run()
-if menu == "🌀 Tăng cường dữ liệu":
+elif menu == "🌀 Tăng cường dữ liệu":
     import app_augment
+    ag.run()
 elif menu == "🧠 Huấn luyện mô hình":
     render_train_tab() 
 elif menu == "📈 Đánh giá mô hình":

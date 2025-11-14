@@ -217,3 +217,7 @@ bỔ SUNG BIỂU ĐỒ TRAIN THEO EPOCH LOAD TỪ CSV, vẽ thế nào để th�
 
 
 Giúp tôi thêm 1 quy trình vào App stremlit (tạo file riêng) và gắn vào app.py. là quá trình tăng cường dữ liệu hình ãnh có nói 
+
+Edit file app_augment.py giúp tôi về cách xữ lý các phần của code này. làm các nút cho tính năng tuỳ chỉnh và người dùng nhập vào
+
+Phần cải tiến mô hình nên làm như thế nào
