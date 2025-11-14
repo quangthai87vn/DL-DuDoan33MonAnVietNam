@@ -178,3 +178,36 @@ giãi thích này là trong code (ok giữ nguyên). Tôi muôn phần giải th
 Trong 1 quy trình xây dựng model học máy thì gồm bao nhiêu bước
 Có vẽ như tôi đang làm 3 bước rồi. Hãy gợi ý tôi xem nếu App Streamlit tôi cần bổ sung các bước còn lại ko và bổ sung như thế nào
 Đặc biêt bước xây dựng mô hình nên làm thế nào  , tôi gửi 2 file lúc train để biết các dữ liệu dc làm như thế nào để bạn có cái nhìn tỗng quan xữ lý 
+
+
+
+
+Thiết kế từ đầu cho tôi file yolo.ipynb đặt trong thư mục "/Jupyter/yolo.ipynb"
+File model train Classifire nhận diện ảnh 33 món đang nằm trong "/Jupyter/runs/mtl_efficientnet_b0_01/checkpoints/mtl_effcientnet_b0_best.pt"
+File model cấu trúc effcientnet_b0 đang được lư tại "/model/mtl_efficientnet_b0.py" 
+Thư mục model cùng cấp với thư mục Jupyter
+- Yêu cầu: viết từng cell trên Jupyter trong VSCode từ import thư viện + load mô hình + dự đoán + truyền ảnh thật và phân vùng các vật thể trong ảnh là món ăn, và món nào biết tên thì hiện tên lên
+- Load đúng trọng số hay ClassName trong model sau khi train và check lại cho đúng
+
+
+
+Xem cách load model trong file stremlit để  load đúng trọng số  và Classname 
+
+
+Nếu muốn segmentation cực chuẩn + đúng từng món → phải chơi hẳn một bài train model segmentation riêng cho dataset món ăn. Hình ảnh là rất nhiều món ăn tôi chỉ cần segmentation vào món ăn thôi cũng dc. Cho code segmentation train từ đầu
+
+
+có thể nhận diện xong rồi lưu ảnh xuống giúp ko
+
+
+
+thử nghĩ xem với tập dữ liệu 33 món ăn thì ta có thể  làm gì với Deep Learning cáo
+
+
+
+Tôi cần làm báo cáo giải thích chi tiêt 1modell này (file tôi gửi kèm mtl_efficientnet_b0.py))
+- Giải thích model này lấy từ đâu
+- Số lớp , retrain thế nào, weight của imanet là sao
+- Giải thích chi tiết cấu trúc model này
+
+trĩển khai thuật toán nhận diện món ăn lại xem

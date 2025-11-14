@@ -77,15 +77,35 @@ def pie_each(df: pd.DataFrame):
     return fig
 
 
+
+
 def stacked_per_class(df: pd.DataFrame):
-    pv = df.pivot_table(index="class", columns="split", values="count", fill_value=0)[["Train", "Validate", "Test"]]
+    # Pivot ra bảng class x (Train/Val/Test)
+    pv = df.pivot_table(
+        index="class",
+        columns="split",
+        values="count",
+        fill_value=0
+    )[["Train", "Validate", "Test"]]
+
+    # 👉 Thêm cột tổng và sắp xếp giảm dần theo tổng số ảnh
+    pv["__total__"] = pv.sum(axis=1)
+    pv = pv.sort_values("__total__", ascending=False)
+    pv = pv.drop(columns="__total__")
+
+    # Vẽ stacked bar như cũ
     fig, ax = plt.subplots(figsize=(12, 6))
-    pv.plot(kind="bar", stacked=True, ax=ax, color=["#FFA726", "#66BB6A", "#26C6DA"])
-    ax.set_title("Phân phối theo lớp (stacked)")
+    pv.plot(kind="bar", stacked=True, ax=ax,
+            color=["#FFA726", "#66BB6A", "#26C6DA"])
+
+    ax.set_title("Phân phối theo lớp (stacked) — sắp xếp theo tổng số ảnh (giảm dần)")
     ax.set_xlabel("")
     ax.tick_params(axis="x", rotation=60)
+
     plt.tight_layout()
     return fig
+
+
 
 
 def total_per_class(df: pd.DataFrame):

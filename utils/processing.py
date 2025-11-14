@@ -15,6 +15,9 @@ from typing import Callable, List, Tuple
 
 
 
+
+
+
 ROOT = "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images"   # <== đổi nếu cần
 root_train = f"{ROOT}/Train"
 root_val   = f"{ROOT}/Validate"
@@ -22,9 +25,7 @@ root_test  = f"{ROOT}/Test"
 
 
 
-#root_train = "/content/4VNfoods_Project/datasets/dataset/Train"
-#root_val = "/content/4VNfoods_Project/datasets/dataset/Val"
-#root_test =  "/content/4VNfoods_Project/datasets/dataset/Test"
+
 
 
 Name_food = {
@@ -63,6 +64,8 @@ Name_food = {
     31:'banh_tieu',
     32:'banh_trung_thu'
 }
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD  = [0.229, 0.224, 0.225]
 
 #augmentation
 train_transform = transforms.Compose([
@@ -73,15 +76,13 @@ train_transform = transforms.Compose([
     transforms.RandomGrayscale(p = 0.2),
     transforms.RandomAdjustSharpness(sharpness_factor=2),
     # A.RandomBrightnessContrast(p=0.2),
-    #transforms.Normalize(mean=[0.485,0.456,0.406],
-    #                     std=[0.229,0.224,0.225])
-    
+    transforms.Normalize(IMAGENET_MEAN,IMAGENET_STD)
 ])
+
 test_transform = transforms.Compose([
     transforms.Resize((224,224)),
     transforms.ToTensor(),
-    #transforms.Normalize(mean=[0.485,0.456,0.406],
-    #                     std=[0.229,0.224,0.225]) #moi them
+    transforms.NormalizeIMAGENET_MEAN,IMAGENET_STD
 ])
 
 train_seg= transforms.Compose([
