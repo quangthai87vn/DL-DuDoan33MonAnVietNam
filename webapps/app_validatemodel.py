@@ -10,6 +10,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+
 from sklearn.metrics import (
     confusion_matrix, roc_curve, auc,
     precision_recall_curve, average_precision_score,
@@ -100,9 +101,9 @@ def _plot_confusion(cm, classes, err_thresh_pct: float = 10.0, dpi: int = 600):
     sns.heatmap(cm_pct * 100, cmap=cmap, vmin=0, vmax=100, cbar=True,
                 xticklabels=classes, yticklabels=classes, ax=ax)
 
-    ax.set_title("Confusion Matrix (% theo hàng)")
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("True")
+    ax.set_title("Confusion Matrix - Ma trận nhầm lẫn (% theo hàng)")
+    ax.set_xlabel("Dự đoán")
+    ax.set_ylabel("Nhãn thật sự")
 
     n = cm.shape[0]
     for i in range(n):
@@ -303,6 +304,57 @@ def _plot_f1_sorted(y_true, y_pred, classes, ascending: bool = False, dpi: int =
     return fig
 
 
+
+def plot_learning_curves(df: pd.DataFrame):
+    """
+    Vẽ 2 biểu đồ:
+    - Loss theo epoch (train_loss, val_loss)
+    - Accuracy theo epoch (train_acc, val_acc)
+    df đọc từ metrics.csv, phải có các cột:
+        epoch, train_loss, val_loss, train_acc, val_acc
+    """
+    # Đảm bảo sắp xếp đúng thứ tự epoch
+    df = df.sort_values("epoch").reset_index(drop=True)
+
+    # Tìm epoch có val_acc tốt nhất để highlight
+    best_idx = df["val_acc"].idxmax()
+    best_epoch = int(df.loc[best_idx, "epoch"])
+    best_val_acc = float(df.loc[best_idx, "val_acc"])
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+    # ---- Loss ----
+    axes[0].plot(df["epoch"], df["train_loss"], label="train_loss", marker="o")
+    axes[0].plot(df["epoch"], df["val_loss"], label="val_loss", marker="o")
+    axes[0].axvline(best_epoch, ls="--", color="gray", alpha=0.5)
+    axes[0].set_xlabel("Epoch")
+    axes[0].set_ylabel("Loss")
+    axes[0].set_title("Loss theo epoch")
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+
+    # ---- Accuracy ----
+    axes[1].plot(df["epoch"], df["train_acc"], label="train_acc", marker="o")
+    axes[1].plot(df["epoch"], df["val_acc"], label="val_acc", marker="o")
+    axes[1].axvline(best_epoch, ls="--", color="gray", alpha=0.5)
+    axes[1].set_xlabel("Epoch")
+    axes[1].set_ylabel("Accuracy")
+    axes[1].set_title("Accuracy theo epoch")
+    axes[1].legend()
+    axes[1].grid(True, alpha=0.3)
+
+    fig.suptitle(
+        f"Learning curves — best val_acc @ epoch {best_epoch}: {best_val_acc:.4f}",
+        fontsize=12,
+        fontweight="bold"
+    )
+    plt.tight_layout()
+    return fig
+
+
+
+
+
 # ======== MAIN TAB RUN ========
 def run():
     st.header("📈 Đánh giá mô hình")
@@ -326,6 +378,73 @@ def run():
     bs = st.slider("Batch size đánh giá", 8, 128, 64, step=8, key="vm_bs")
 
     st.caption(f"Checkpoint: `{Path(ckpt_str).name}` • classes={len(classes) or '??'} • device={device.type.upper()}")
+
+
+    st.caption(Path(ckpt_str).parent.parent)
+
+    # ========== PHÂN TÍCH QUÁ TRÌNH TRAIN TỪ metrics.csv ==========
+    st.subheader("📈 Phân tích quá trình huấn luyện (metrics.csv)")
+
+    default_metrics = str(
+        Path(ckpt_str).parent.parent / "metrics.csv"
+
+
+    #default_metrics = str(
+    #   Path("runs") / "mtl_efficientnet_b0_20251113-181112" / "metrics.csv"
+    )  # chỉnh lại tên run cho đúng với thư mục của bạn
+
+    metrics_path_str = st.text_input(
+        "📄 Đường dẫn tới metrics.csv",
+        value=default_metrics,
+        key="dm_metrics_csv",
+    )
+    metrics_path = Path(metrics_path_str)
+
+    if not metrics_path.exists():
+        st.warning("⚠️ Không tìm thấy file metrics.csv, kiểm tra lại đường dẫn.")
+    else:
+        df_metrics = pd.read_csv(metrics_path)
+        required_cols = {"epoch", "train_loss", "val_loss", "train_acc", "val_acc"}
+        if not required_cols.issubset(df_metrics.columns):
+            st.error(f"metrics.csv thiếu cột: {required_cols - set(df_metrics.columns)}")
+        else:
+            with st.spinner("Đang vẽ learning curves..."):
+                fig_lc = plot_learning_curves(df_metrics)
+            st.pyplot(fig_lc, use_container_width=True)
+
+            # Show bảng tóm tắt mấy epoch cuối cho dễ soi
+            st.markdown("#### 📋 Một vài epoch cuối")
+            st.dataframe(
+                df_metrics.tail(5).reset_index(drop=True),
+                use_container_width=True,
+            )
+
+            # Nhận xét nhanh dựa trên shape của curve
+            best_epoch = int(df_metrics.loc[df_metrics["val_acc"].idxmax(), "epoch"])
+            best_val = float(df_metrics["val_acc"].max())
+            last_val = float(df_metrics["val_acc"].iloc[-1])
+
+            st.markdown(
+                f"- 🏆 **Best val_acc** tại epoch `{best_epoch}` ≈ **{best_val:.4f}`**  \n"
+                f"- 🔚 val_acc epoch cuối ≈ **{last_val:.4f}**  \n"
+                "- Nếu train_loss giảm đều, val_loss cũng giảm rồi ổn định, "
+                "train_acc và val_acc bám nhau sát → mô hình học **ổn, ít overfit**.  \n"
+                "- Nếu train_loss giảm mạnh mà val_loss phình lên, train_acc cao nhưng val_acc đứng "
+                "hoặc giảm → dấu hiệu **overfitting**, nên tăng regularization / augment / early stopping sớm hơn."
+            )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # 1) Chạy đánh giá
     if st.button("🧪 Chạy đánh giá trên Test", key="vm_btn_eval"):

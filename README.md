@@ -22,6 +22,9 @@ docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
   -e DATA_DIR="/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images" \
   vnfoods-app
 ```
+source .venv/bin/activate
+deactivate
+
 
 
 ## Cách chạy Project :question:
@@ -179,7 +182,7 @@ Trong 1 quy trình xây dựng model học máy thì gồm bao nhiêu bước
 Có vẽ như tôi đang làm 3 bước rồi. Hãy gợi ý tôi xem nếu App Streamlit tôi cần bổ sung các bước còn lại ko và bổ sung như thế nào
 Đặc biêt bước xây dựng mô hình nên làm thế nào  , tôi gửi 2 file lúc train để biết các dữ liệu dc làm như thế nào để bạn có cái nhìn tỗng quan xữ lý 
 
-
+Giãi thích là sao
 
 
 Thiết kế từ đầu cho tôi file yolo.ipynb đặt trong thư mục "/Jupyter/yolo.ipynb"
@@ -210,4 +213,7 @@ Tôi cần làm báo cáo giải thích chi tiêt 1modell này (file tôi gửi 
 - Số lớp , retrain thế nào, weight của imanet là sao
 - Giải thích chi tiết cấu trúc model này
 
-trĩển khai thuật toán nhận diện món ăn lại xem
+bỔ SUNG BIỂU ĐỒ TRAIN THEO EPOCH LOAD TỪ CSV, vẽ thế nào để thấy và đánh giá được train có ổn định hay ko. tôi gửi kèm file streamlit
+
+
+Giúp tôi thêm 1 quy trình vào App stremlit (tạo file riêng) và gắn vào app.py. là quá trình tăng cường dữ liệu hình ãnh có nói 
