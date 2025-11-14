@@ -17,6 +17,7 @@ from model.mtl_efficientnet_b0 import mtl_efficientnet_b0_model  # type: ignore
 # === import các module UI ===
 import app_datamining as dm
 import app_validatemodel as vm
+
 import app_predict as pr
 import app_trainmodel as tr   # <--- NEW
 from app_trainmodel import render_train_tab  
@@ -162,9 +163,12 @@ with st.expander("📘 Giới thiệu & Hướng xử lý", expanded=False):
 # ----- Điều hướng -----
 menu = st.sidebar.radio(
     "Chức năng",
-    ["📊 Khai phá dữ liệu", "🧠 Huấn luyện mô hình", "📈 Đánh giá mô hình", "🖼️ Dự đoán ảnh"],
+    ["📊 Khai phá dữ liệu", "🌀 Tăng cường dữ liệu","🧠 Huấn luyện mô hình", "📈 Đánh giá mô hình", "🖼️ Dự đoán ảnh"],
     index=0
 )
+
+
+#augment_mode = st.sidebar.checkbox("🌀 Tăng cường dữ liệu")
 
 # Nếu module train vừa set cờ cần reload danh sách ckpt → rerun để sidebar cập nhật ngay
 if st.session_state.get("NEED_RELOAD_CKPTS"):
@@ -174,9 +178,12 @@ if st.session_state.get("NEED_RELOAD_CKPTS"):
 # ----- Router -----
 if menu == "📊 Khai phá dữ liệu":
     dm.run()
+if menu == "🌀 Tăng cường dữ liệu":
+    import app_augment
 elif menu == "🧠 Huấn luyện mô hình":
     render_train_tab() 
 elif menu == "📈 Đánh giá mô hình":
     vm.run()
+
 else:
     pr.run()
