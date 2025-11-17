@@ -14,7 +14,7 @@
 ```python
 docker stop vnfoods-app 
 docker rm vnfoods-app 
-sudo docker build -t vnfoods-app:latest .mtltechnology
+sudo docker build -t vnfoods-app:latest 
 docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
   -v "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:ro" \
   -v "$PWD/Jupyter/runs:/app/Jupyter/runs:ro" \
@@ -24,6 +24,16 @@ docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
 ```
 source .venv/bin/activate
 deactivate
+
+
+sudo docker build -t vnfoods-app:latest .
+docker run -d --name vnfoods-app --gpus all -p 6789:6789 \
+  -v "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images:ro" \
+  -v "$PWD/Jupyter/runs:/app/Jupyter/runs:ro" \
+  -v "$PWD/Jupyter/images:/app/Jupyter/images:ro" \
+  -e DATA_DIR="/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images" \
+  vnfoods-app
+
 
 
 
