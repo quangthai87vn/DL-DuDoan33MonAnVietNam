@@ -1,4 +1,3 @@
-# Jupyter/main.py
 import sys
 import json
 import csv
@@ -27,37 +26,43 @@ from efficientnet_b0 import (  # type: ignore
 # 1. CẤU HÌNH TOÀN CỤC
 # ========================
 
-# Đường dẫn dataset 33 món
+# Đường dẫn dataset ĐÃ THÊM 1 CLASS MỚI (34 lớp)
 DATA_DIR = Path("/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images")
 
-# Prefix tên run, sau đó nối với timestamp
-RUN_PREFIX = "MTL_TGFOOD_"
+# Run gốc 33 class dùng làm nền để copy trọng số
+# !!! NHỚ ĐỔI TÊN NÀY THÀNH RUN 33 LỚP TỐT NHẤT CỦA ÔNG !!!
+BASE_RUN_NAME = "MTL_TGFOOD_20251118_184127"   # ví dụ, sửa lại cho đúng
+BASE_CKPT_NAME = "mtl_effb0_best.pt"
+
+# Prefix tên run incremental
+RUN_PREFIX = "MTL_TGFOOD_INC_"   # ví dụ: MTL_TGFOOD_INC_20251118_210001
 
 IMG_SIZE = 224
-EPOCHS = 100
+EPOCHS = 30              # incremental nên train ít hơn
 BATCH_SIZE = 64
 NUM_WORKERS = 8
 
 SEED = 1337
-LR = 3e-4
+LR = 1e-4                 # LR nhỏ hơn finetune cho an toàn
 WEIGHT_DECAY = 1e-4
 
-GAMMA = 1.5        # focal gamma
-SMOOTH = 0.05      # label smoothing
+GAMMA = 1.5               # focal gamma
+SMOOTH = 0.05             # label smoothing
 DROPOUT = 0.4
-PRETRAINED = True
-FREEZE_BACKBONE = False
+PRETRAINED = False        # incremental: ta copy từ model cũ, ko cần load ImageNet
+FREEZE_BACKBONE = False   # sẽ tự freeze bằng tay cho linh hoạt
 
-PATIENCE = 10      # số epoch liên tiếp val_acc không cải thiện thì dừng
+PATIENCE = 8              # early stopping
+
 
 # Root cho các run
 RUNS_ROOT = ROOT_DIR / "runs"
 
-# Mỗi lần chạy: tạo 1 RUN_NAME = "MTL_TGFOOD_" + timestamp
+# Tạo RUN_NAME = prefix + timestamp
 RUN_ID = datetime.now().strftime("%Y%m%d_%H%M%S")
-RUN_NAME = f"{RUN_PREFIX}{RUN_ID}"          # vd: MTL_TGFOOD_20251118_201700
+RUN_NAME = f"{RUN_PREFIX}{RUN_ID}"          # vd: MTL_TGFOOD_INC_20251118_210001
 
-# Thư mục run cụ thể: runs/MTL_TGFOOD_20251118_201700
+# Thư mục run cụ thể: runs/MTL_TGFOOD_INC_YYYYMMDD_HHMMSS
 RUN_DIR = RUNS_ROOT / RUN_NAME
 CKPT_DIR = RUN_DIR / "checkpoints"
 IMAGES_DIR = ROOT_DIR / "images"
@@ -90,24 +95,124 @@ def set_seed(seed: int = 1337):
     torch.backends.cudnn.benchmark = True
 
 
+# ============================
+# 3. HÀM XÂY MODEL INCREMENTAL
+# ============================
+
+def build_incremental_model(device: torch.device):
+    """
+    - Load checkpoint 33 lớp
+    - Build model_old (33 lớp) & model_new (34 lớp)
+    - Copy backbone + head (trừ fc cuối)
+    - Copy trọng số fc cho các class cũ dựa trên tên class
+    - Trả về: model_new, new_class_names, class_counts
+    """
+    # 3.1. Dataloader mới (dataset đã thêm class -> 34 lớp)
+    loaders, new_class_names, class_counts = create_dataloaders(
+        DATA_DIR,
+        img_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+    )
+    num_new = len(new_class_names)
+    print(f"New classes ({num_new}):", new_class_names)
+
+    # 3.2. Load checkpoint cũ 33 lớp
+    base_run_dir = RUNS_ROOT / BASE_RUN_NAME
+    base_ckpt_path = base_run_dir / "checkpoints" / BASE_CKPT_NAME
+    print("Loading base checkpoint from:", base_ckpt_path)
+
+    ckpt = torch.load(base_ckpt_path, map_location=device)
+    old_class_names = ckpt["class_names"]
+    num_old = len(old_class_names)
+    print(f"Old classes ({num_old}):", old_class_names)
+
+    if num_new <= num_old:
+        raise ValueError(
+            f"Dataset mới ({num_new}) không lớn hơn số class cũ ({num_old}). "
+            f"Incremental phải có thêm ít nhất 1 class mới."
+        )
+
+    # 3.3. Build model_old & load trọng số
+    model_old = build_model(
+        num_classes=num_old,
+        dropout=DROPOUT,
+        pretrained=False,      # không cần load lại ImageNet
+        freeze_backbone=False,
+        device=device,
+    )
+    model_old.load_state_dict(ckpt["model_state"])
+    model_old.eval()
+
+    # 3.4. Build model_new với số class mới
+    model_new = build_model(
+        num_classes=num_new,
+        dropout=DROPOUT,
+        pretrained=PRETRAINED,      # vẫn để False
+        freeze_backbone=False,
+        device=device,
+    )
+
+    # 3.5. Copy backbone & head (trừ fc cuối)
+    with torch.no_grad():
+        # backbone features
+        model_new.backbone.features.load_state_dict(
+            model_old.backbone.features.state_dict()
+        )
+
+        # các layer classifier trước fc cuối (0..len-2)
+        for i in range(len(model_old.backbone.classifier) - 1):
+            model_new.backbone.classifier[i].load_state_dict(
+                model_old.backbone.classifier[i].state_dict()
+            )
+
+        # 3.6. Copy trọng số cho từng class cũ theo tên
+        old_fc = model_old.backbone.classifier[-1]  # Linear out_old
+        new_fc = model_new.backbone.classifier[-1]  # Linear out_new
+
+        # Map theo tên class, tránh lệch thứ tự
+        for new_idx, cls_name in enumerate(new_class_names):
+            if cls_name in old_class_names:
+                old_idx = old_class_names.index(cls_name)
+                new_fc.weight[new_idx] = old_fc.weight[old_idx]
+                new_fc.bias[new_idx]   = old_fc.bias[old_idx]
+                print(f"Copied weights for existing class: {cls_name}")
+            else:
+                # Class mới -> giữ random init
+                print(f"New class (random init): {cls_name}")
+
+    # 3.7. Freeze backbone + các layer head trừ fc cuối
+    for param in model_new.backbone.features.parameters():
+        param.requires_grad = False
+
+    for i in range(len(model_new.backbone.classifier) - 1):
+        for p in model_new.backbone.classifier[i].parameters():
+            p.requires_grad = False
+
+    trainable_params = [n for n, p in model_new.named_parameters() if p.requires_grad]
+    print("Trainable params count:", len(trainable_params))
+    print("Trainable params:", trainable_params)
+
+    return model_new, loaders, new_class_names, class_counts
+
+
+# ============================
+# 4. TRAIN LOOP INCREMENTAL
+# ============================
+
 def main():
-    print(f"🔥 New training run: {RUN_NAME}")
+    print(f"🔥 Incremental training run: {RUN_NAME}")
     print(f"📂 Run directory   : {RUN_DIR}")
     set_seed(SEED)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device:", device)
 
-    # 2.1. Dataloaders
-    loaders, class_names, class_counts = create_dataloaders(
-        DATA_DIR,
-        img_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
-        num_workers=NUM_WORKERS,
-    )
+    # 4.1. Build model_new từ checkpoint cũ + dataloader mới
+    model, loaders, class_names, class_counts = build_incremental_model(device)
     num_classes = len(class_names)
 
-    # 2.2. SAVE runs_meta (giống kiến trúc cũ)
+    # 4.2. SAVE runs_meta (class_names mới)
     with open(RUNS_META_DIR / "class_names.json", "w", encoding="utf-8") as f:
         json.dump(class_names, f, ensure_ascii=False, indent=2)
     with open(RUNS_META_DIR / "mean_std.json", "w") as f:
@@ -118,17 +223,9 @@ def main():
         )
     with open(RUNS_META_DIR / "img_size.json", "w") as f:
         json.dump({"img_size": IMG_SIZE}, f, indent=2)
-    print("✅ Saved runs_meta/")
+    print("✅ Saved runs_meta/ (updated with new classes)")
 
-    # 2.3. Model + criterion + optimizer
-    model = build_model(
-        num_classes=num_classes,
-        dropout=DROPOUT,
-        pretrained=PRETRAINED,
-        freeze_backbone=FREEZE_BACKBONE,
-        device=device,
-    )
-
+    # 4.3. Criterion + optimizer + scheduler
     criterion = build_criterion_from_counts(
         class_counts,
         gamma=GAMMA,
@@ -147,7 +244,7 @@ def main():
 
     history: List[Dict[str, Any]] = []
     best_val_acc = 0.0
-    best_ckpt_name = "mtl_effcientnet_b0_best.pt"
+    best_ckpt_name = "mtl_effb0_inc_best.pt"
     epochs_no_improve = 0
 
     # Chuẩn bị CSV: history.csv & metrics.csv
@@ -165,6 +262,7 @@ def main():
     run_config = {
         "run_name": RUN_NAME,
         "run_id": RUN_ID,
+        "base_run_name": BASE_RUN_NAME,
         "data_dir": str(DATA_DIR),
         "img_size": IMG_SIZE,
         "epochs": EPOCHS,
@@ -177,15 +275,18 @@ def main():
         "smooth": SMOOTH,
         "dropout": DROPOUT,
         "pretrained": PRETRAINED,
-        "freeze_backbone": FREEZE_BACKBONE,
+        "freeze_backbone": True,     # thực tế đã freeze features + head
         "patience": PATIENCE,
         "num_classes": num_classes,
     }
     with open(RUN_DIR / "config.json", "w") as f:
         json.dump(run_config, f, indent=2)
 
+    train_loader = loaders["train"]
+    val_loader   = loaders["val"]
+
     # ========================
-    # 3. TRAINING LOOP
+    # 5. TRAINING LOOP
     # ========================
     for epoch in range(1, EPOCHS + 1):
         print(f"\n===== Epoch {epoch}/{EPOCHS} =====")
@@ -198,8 +299,8 @@ def main():
         n_train = 0
 
         pbar = tqdm(
-            loaders["train"],
-            desc=f"[Train] {epoch}/{EPOCHS}",
+            train_loader,
+            desc=f"[Train INC] {epoch}/{EPOCHS}",
             dynamic_ncols=True,
         )
         for imgs, labels in pbar:
@@ -240,8 +341,8 @@ def main():
 
         with torch.no_grad():
             pbar_val = tqdm(
-                loaders["val"],
-                desc=f"[Valid] {epoch}/{EPOCHS}",
+                val_loader,
+                desc=f"[Valid INC] {epoch}/{EPOCHS}",
                 dynamic_ncols=True,
             )
             for imgs, labels in pbar_val:
@@ -316,7 +417,7 @@ def main():
                     "model_state": model.state_dict(),
                     "optimizer_state": optimizer.state_dict(),
                     "scheduler_state": scheduler.state_dict(),
-                    "class_names": class_names,
+                    "class_names": class_names,   # 34 lớp mới
                 },
                 ckpt_path,
             )
@@ -332,7 +433,7 @@ def main():
     # Save history.json
     with open(HISTORY_JSON, "w") as f:
         json.dump(history, f, indent=2)
-    print("✅ Training done.")
+    print("✅ Incremental training done.")
     print("   Run dir      :", RUN_DIR)
     print("   history.csv  :", CSV_PATH)
     print("   metrics.csv  :", METRICS_CSV)

@@ -261,3 +261,31 @@ OK. từ từ hãy làm thêm tính năng mà giờ tôi cần chuẩn hoá lạ
 - Sau khi mô hình này chuẩn tôi mới tiếp tục triển khai nhận dạng thêm 3 món mới 
 Trước khi thực hiện hạy vẽ cấu trúc thư mục và xác nhận những gì đã hiểu rồi hãy làm
 
+
+
+phần đánh giá mô hình có lỗi: cần sửa lại như sau : 
+- Khi chuyển qua lại giữ các modell (combobox phía trên bên trái) thì phải tự load đánh giá epoch từ csv + tự đánh giá trên tập test và sẽ sẳn các biểu đồ
+
+
+
+2. Đếm số món ăn trên bàn – chuyển lên bài toán detection
+Ông đã nhắc vụ này rồi, giờ làm bài bản:
+Ý tưởng:
+Input: ảnh 1 cái bàn ăn nhiều món → hệ thống:
+Phát hiện vùng có món ăn (object detection / segmentation).
+Crop từng vùng → ném vào model 33 món để phân loại.
+
+Output:
+Bàn có: 2 tô phở, 1 dĩa gỏi cuốn, 3 ly chè, …
+Tái sử dụng model:
+Giữ nguyên EfficientNet-B0 làm classifier backend.
+Train thêm một model detection (YOLO, Faster R-CNN, …) chỉ để tìm “vùng có món ăn” (không cần biết món gì).
+
+Pipeline:
+Detector → sinh bounding box.
+Mỗi bounding box crop → resize → cho EfficientNet-B0 class.
+Lợi thế học thuật:
+Ông nâng từ image-level classification → instance-level recognition.
+Có thể so sánh:
+Accuracy thuần classifier vs accuracy end-to-end (detector + classifier).
+Thời gian inference, độ phức tạp hệ thống.

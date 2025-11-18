@@ -1,85 +1,13 @@
-# model/mtl_efficientnet_b0.py
-'''
-import torch
-import torch.nn as nn
-from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+from __future__ import annotations
 
-
-class MTLEfficientNetB0(nn.Module):
-    """
-    Fine-tuned EfficientNet-B0 (pretrained on ImageNet).
-    - Freeze phần backbone đầu để giữ đặc trưng low-level
-    - Thay classifier bằng head mới gồm Dropout + Linear + ReLU
-    - num_classes: số lớp (ví dụ 33 món ăn)
-    """
-
-    def __init__(self, num_classes: int = 33,
-                 pretrained: bool = True,
-                 freeze_backbone: bool = True,
-                 dropout_rate: float = 0.4):
-        super().__init__()
-
-        # === 1. Load backbone EfficientNet B0 ===
-        weights = EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
-        self.backbone = efficientnet_b0(weights=weights)
-
-        # === 2. Freeze các layer đầu (conv1..MBConv4) nếu được yêu cầu ===
-        if freeze_backbone:
-            freeze_list = [
-                "features.0",  # stem conv
-                "features.1",  # MBConv1
-                "features.2",
-                "features.3",  # MBConv4
-            ]
-            for name, param in self.backbone.named_parameters():
-                if any(name.startswith(block) for block in freeze_list):
-                    param.requires_grad = False
-
-        # === 3. Xây head classifier mới ===
-        in_features = self.backbone.classifier[1].in_features
-
-        self.backbone.classifier = nn.Sequential(
-            nn.Dropout(p=dropout_rate, inplace=True),
-            nn.Linear(in_features, 512),
-            nn.BatchNorm1d(512),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=dropout_rate),
-            nn.Linear(512, num_classes)
-        )
-
-        # === 4. Lưu meta cho trainer ===
-        self._export_name = "MTL-EfficientNetB0-FT"
-        self._imagenet_normalize = {
-            "mean": [0.485, 0.456, 0.406],
-            "std":  [0.229, 0.224, 0.225]
-        }
-
-    def forward(self, x):
-        return self.backbone(x)
-
-
-def mtl_efficientnet_b0_model(num_classes: int = 33,
-                              pretrained: bool = True,
-                              freeze_backbone: bool = True) -> nn.Module:
-    """
-    Factory để gọi từ classifi_main.py
-    """
-    return MTLEfficientNetB0(
-        num_classes=num_classes,
-        pretrained=pretrained,
-        freeze_backbone=freeze_backbone
-    )
-'''
-
-
-import os
 from pathlib import Path
 from typing import Tuple, Dict, List
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import datasets, transforms
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
@@ -90,7 +18,7 @@ from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 class MTLEfficientNetB0(nn.Module):
     """
-    Fine-tuned EfficientNet-B0 (pretrained on ImageNet).
+    Fine-tuned EfficientNet-B0 (pretrained on ImageNet) cho bài toán 33 món ăn.
     - Dùng backbone EfficientNet-B0
     - Thay classifier bằng head mới: Dropout -> Linear 512 -> BN -> ReLU -> Dropout -> Linear num_classes
     """
@@ -107,7 +35,7 @@ class MTLEfficientNetB0(nn.Module):
         weights = EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
         self.backbone = efficientnet_b0(weights=weights)
 
-        # Freeze một phần backbone nếu muốn
+        # Freeze 1 phần backbone nếu muốn
         if freeze_backbone:
             freeze_list = [
                 "features.0",  # stem conv
@@ -119,7 +47,7 @@ class MTLEfficientNetB0(nn.Module):
                 if any(name.startswith(block) for block in freeze_list):
                     param.requires_grad = False
 
-        # Thay classifier
+        # Thay classifier mặc định bằng head custom
         in_features = self.backbone.classifier[1].in_features
         self.backbone.classifier = nn.Sequential(
             nn.Dropout(p=dropout_rate, inplace=True),
@@ -136,7 +64,7 @@ class MTLEfficientNetB0(nn.Module):
             "std": [0.229, 0.224, 0.225],
         }
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.backbone(x)
 
 
@@ -148,8 +76,11 @@ def build_model(
     device: torch.device | None = None,
 ) -> nn.Module:
     """
-    Khởi tạo model + chuyển về channels_last như notebook.
+    Khởi tạo model + chuyển về channels_last, compile nếu có thể.
     """
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     model = MTLEfficientNetB0(
         num_classes=num_classes,
         pretrained=pretrained,
@@ -157,12 +88,9 @@ def build_model(
         dropout_rate=dropout,
     )
 
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     model = model.to(device).to(memory_format=torch.channels_last)
 
-    # Thử compile giống notebook (nếu PyTorch 2.x)
+    # Thử torch.compile (PyTorch >= 2.0)
     try:
         model = torch.compile(model, mode="reduce-overhead", fullgraph=False)
         print("✅ torch.compile enabled")
@@ -178,7 +106,7 @@ def build_model(
 
 class FocalCrossEntropyWithWeights(nn.Module):
     """
-    Focal CE + label smoothing + class weights (giống ý tưởng notebook).
+    Focal CrossEntropy + label smoothing + class weights.
     - class_weights: Tensor [C]
     - gamma: hệ số focal
     - smooth: label smoothing (0 -> one-hot cứng)
@@ -186,11 +114,12 @@ class FocalCrossEntropyWithWeights(nn.Module):
 
     def __init__(self, class_weights: torch.Tensor, gamma: float = 1.5, smooth: float = 0.05):
         super().__init__()
+        # Lưu class_weights dưới dạng buffer để tự move theo model.to(device)
         self.register_buffer("class_weights", class_weights)
         self.gamma = gamma
         self.smooth = smooth
 
-    def forward(self, logits, targets):
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         # logits: [B, C], targets: [B]
         num_classes = logits.size(1)
 
@@ -210,7 +139,7 @@ class FocalCrossEntropyWithWeights(nn.Module):
         # cross-entropy từng mẫu (đã smoothing)
         ce = -(true_dist * log_probs).sum(dim=1)
 
-        # trọng số theo label thật
+        # trọng số theo nhãn thật
         w = self.class_weights[targets]
 
         loss = (w * focal_factor * ce).mean()
@@ -231,21 +160,20 @@ def build_criterion_from_counts(
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     counts = torch.tensor(class_counts, dtype=torch.float32, device=device)
-    # Trọng số ngược tần suất (normalize cho dễ nhìn)
     inv_freq = 1.0 / (counts + 1e-6)
     class_weights = inv_freq / inv_freq.mean()
 
-    print("Class weights:", class_weights.cpu().numpy())
+    print("Class weights (normalized):", class_weights.detach().cpu().numpy())
 
     return FocalCrossEntropyWithWeights(class_weights=class_weights, gamma=gamma, smooth=smooth)
 
 
 # =================================
-# 3. Dataloaders + transforms giống NB
+# 3. Dataloaders + transforms
 # =================================
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD = [0.229, 0.224, 0.225]
+IMAGENET_STD  = [0.229, 0.224, 0.225]
 
 
 def create_dataloaders(
@@ -255,34 +183,62 @@ def create_dataloaders(
     num_workers: int = 8,
 ) -> Tuple[Dict[str, DataLoader], List[str], List[int]]:
     """
-    Tạo dataloader cho Train/Val/Test + trả về class_names + class_counts(train).
-    data_dir: folder gốc chứa 3 thư mục con Train/Validate/Test (giống notebook).
+    Tạo dataloader cho Train/Validate/Test + trả về class_names + class_counts(train).
+
+    Train loader dùng:
+    - Augmentation mạnh (crop, flip, rotate, jitter, affine, blur, erasing)
+    - WeightedRandomSampler: oversample lớp ít, giảm lớp nhiều.
     """
     data_dir = Path(data_dir)
     train_dir = data_dir / "Train"
-    val_dir = data_dir / "Validate"
-    test_dir = data_dir / "Test"
+    val_dir   = data_dir / "Validate"
+    test_dir  = data_dir / "Test"
 
-    # Ép bất cứ ảnh nào cũng về RGB
+    # Ép mọi ảnh về RGB
     to_rgb = transforms.Lambda(lambda im: im.convert("RGB"))
 
-    # Augment tương tự notebook: crop + jitter + blur + affine
+    # ==== Data Augmentation cho TRAIN ====
     train_tfms = transforms.Compose([
-        transforms.RandomResizedCrop(img_size, scale=(0.85, 1.0)),
-        transforms.RandomHorizontalFlip(0.5),
-        transforms.ColorJitter(0.2, 0.2, 0.1, 0.05),
+        transforms.RandomResizedCrop(
+            img_size,
+            scale=(0.85, 1.0),
+            ratio=(0.9, 1.1),
+        ),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(degrees=10),
+
+        transforms.ColorJitter(
+            brightness=0.25,
+            contrast=0.25,
+            saturation=0.20,
+            hue=0.05,
+        ),
         transforms.RandomAffine(
-            degrees=10,
+            degrees=0,
             translate=(0.05, 0.05),
             scale=(0.95, 1.05),
             shear=5,
         ),
-        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5)),
+
+        transforms.RandomApply(
+            [transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))],
+            p=0.2,
+        ),
+
         to_rgb,
         transforms.ToTensor(),
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
+
+        transforms.RandomErasing(
+            p=0.25,
+            scale=(0.02, 0.08),
+            ratio=(0.3, 3.3),
+            value='random',
+            inplace=False,
+        ),
     ])
 
+    # ==== Transform cho VAL/TEST (không augment) ====
     eval_tfms = transforms.Compose([
         transforms.Resize((img_size, img_size)),
         to_rgb,
@@ -290,9 +246,10 @@ def create_dataloaders(
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
     ])
 
+    # Dataset
     train_ds = datasets.ImageFolder(train_dir, transform=train_tfms)
-    val_ds = datasets.ImageFolder(val_dir, transform=eval_tfms)
-    test_ds = datasets.ImageFolder(test_dir, transform=eval_tfms)
+    val_ds   = datasets.ImageFolder(val_dir,   transform=eval_tfms)
+    test_ds  = datasets.ImageFolder(test_dir,  transform=eval_tfms)
 
     class_names = train_ds.classes
     num_classes = len(class_names)
@@ -304,10 +261,26 @@ def create_dataloaders(
         class_counts[label] += 1
     print("Class counts:", class_counts)
 
+    # ===== WeightedRandomSampler cho TRAIN =====
+    counts = np.array(class_counts, dtype=np.float32)
+    inv_freq = 1.0 / (counts + 1e-6)
+    inv_freq = inv_freq / inv_freq.sum()  # normalize
+
+    sample_weights = [inv_freq[label] for _, label in train_ds.samples]
+    sample_weights = torch.tensor(sample_weights, dtype=torch.double)
+
+    sampler = WeightedRandomSampler(
+        weights=sample_weights,
+        num_samples=len(sample_weights),   # mỗi epoch ~ size train set
+        replacement=True,
+    )
+
+    # DataLoader
     train_loader = DataLoader(
         train_ds,
         batch_size=batch_size,
-        shuffle=True,
+        sampler=sampler,          # dùng sampler, không shuffle
+        shuffle=False,
         num_workers=num_workers,
         pin_memory=True,
         persistent_workers=True,
@@ -332,10 +305,10 @@ def create_dataloaders(
         prefetch_factor=4,
     )
 
-    loaders = {
+    loaders: Dict[str, DataLoader] = {
         "train": train_loader,
-        "val": val_loader,
-        "test": test_loader,
+        "val":   val_loader,
+        "test":  test_loader,
     }
     return loaders, class_names, class_counts
 

@@ -25,7 +25,6 @@ from torchvision import datasets, transforms
 sns.set_style("whitegrid")
 
 
-
 def _infer_all_with_progress(model, dl_test, device):
     """Suy luận toàn bộ test loader + progressbar theo từng batch."""
     total = len(dl_test)
@@ -54,13 +53,6 @@ def _infer_all_with_progress(model, dl_test, device):
     return torch.cat(logits_all, 0), torch.cat(targets_all, 0)
 
 
-
-
-
-
-
-
-
 # ======== IMG & TRANSFORMS ========
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD  = (0.229, 0.224, 0.225)
@@ -84,7 +76,7 @@ def make_transform(mode: str = "stretch"):
 def show_plot(title: str, fig, explainer_md: str, key: str = ""):
     """Render a titled plot + explanation expander with consistent spacing."""
     st.markdown(" ")
-    st.markdown(f"### {title}")  # (giữ nhịp – tránh dùng title quá to lặp nhiều)
+    st.markdown(f"### {title}")
     st.pyplot(fig, use_container_width=True)
     with st.expander("ℹ️ Giải thích nhanh", expanded=False):
         st.markdown(explainer_md)
@@ -189,10 +181,23 @@ def _plot_topk(y_true, prob, k_max: int = 5, dpi: int = 300):
 
 def _plot_perclass(y_true, y_pred, classes, dpi: int = 300):
     C = len(classes)
-    support = np.bincount(y_true, minlength=C)
-    correct = np.bincount(y_true[y_true == y_pred], minlength=C)
+
+    # BỎ QUA các mẫu có label >= C (ví dụ dataset 34 lớp nhưng model 33 lớp)
+    mask = y_true < C
+    y_true_f = y_true[mask]
+    y_pred_f = y_pred[mask]
+
+    # Tính support & correct trên phần đã lọc
+    support = np.bincount(y_true_f, minlength=C)[:C]
+    correct = np.bincount(y_true_f[y_true_f == y_pred_f], minlength=C)[:C]
+
     acc_cls = np.divide(correct, np.maximum(support, 1))
-    df = pd.DataFrame({"class": classes, "support": support, "acc": acc_cls}).sort_values("acc")
+
+    df = pd.DataFrame({
+        "class": classes,
+        "support": support,
+        "acc": acc_cls
+    }).sort_values("acc")
 
     fig, ax1 = plt.subplots(figsize=(10, 8), dpi=dpi)
     sns.barplot(data=df, x="acc", y="class", ax=ax1, color="#42a5f5")
@@ -203,6 +208,8 @@ def _plot_perclass(y_true, y_pred, classes, dpi: int = 300):
         ax1.text(v + 0.01, i, f"{v*100:.1f}%", va="center", fontsize=8)
     plt.tight_layout()
     return fig
+
+
 
 def _plot_conf_pairs(y_true, y_pred, classes, top_n: int = 10, dpi: int = 300):
     C = len(classes)
@@ -239,9 +246,17 @@ def _plot_conf_pairs(y_true, y_pred, classes, top_n: int = 10, dpi: int = 300):
     return fig
 
 def _plot_prf_bars(y_true, y_pred, classes, dpi: int = 300):
+    # labels = 0..C-1 theo model, để khớp với target_names
+    labels = list(range(len(classes)))
     report = classification_report(
-        y_true, y_pred, target_names=classes, output_dict=True, zero_division=0
+        y_true,
+        y_pred,
+        labels=labels,
+        target_names=classes,
+        output_dict=True,
+        zero_division=0,
     )
+
     rows = []
     for name in classes:
         if name in report:
@@ -252,6 +267,7 @@ def _plot_prf_bars(y_true, y_pred, classes, dpi: int = 300):
                 "recall":    r.get("recall", 0.0),
                 "f1-score":  r.get("f1-score", 0.0),
             })
+
     if not rows:
         fig, ax = plt.subplots(figsize=(6, 3), dpi=dpi)
         ax.text(0.5, 0.5, "Không có dữ liệu để vẽ.", ha="center", va="center")
@@ -277,11 +293,23 @@ def _plot_prf_bars(y_true, y_pred, classes, dpi: int = 300):
     plt.tight_layout()
     return fig
 
+
 def _plot_f1_sorted(y_true, y_pred, classes, ascending: bool = False, dpi: int = 300):
+    # labels = 0..C-1 để khớp với target_names
+    labels = list(range(len(classes)))
     report = classification_report(
-        y_true, y_pred, target_names=classes, output_dict=True, zero_division=0
+        y_true,
+        y_pred,
+        labels=labels,
+        target_names=classes,
+        output_dict=True,
+        zero_division=0,
     )
-    rows = [{"class": name, "f1": report.get(name, {}).get("f1-score", 0.0)} for name in classes]
+
+    rows = [
+        {"class": name, "f1": report.get(name, {}).get("f1-score", 0.0)}
+        for name in classes
+    ]
     df = pd.DataFrame(rows).sort_values("f1", ascending=ascending).reset_index(drop=True)
 
     fig_w = max(10, len(df) * 0.35)
@@ -313,10 +341,8 @@ def plot_learning_curves(df: pd.DataFrame):
     df đọc từ metrics.csv, phải có các cột:
         epoch, train_loss, val_loss, train_acc, val_acc
     """
-    # Đảm bảo sắp xếp đúng thứ tự epoch
     df = df.sort_values("epoch").reset_index(drop=True)
 
-    # Tìm epoch có val_acc tốt nhất để highlight
     best_idx = df["val_acc"].idxmax()
     best_epoch = int(df.loc[best_idx, "epoch"])
     best_val_acc = float(df.loc[best_idx, "val_acc"])
@@ -352,14 +378,10 @@ def plot_learning_curves(df: pd.DataFrame):
     return fig
 
 
-
-
-
 # ======== MAIN TAB RUN ========
 def run():
     st.header("📈 Đánh giá mô hình")
 
-    # Model & classes đã được load ở sidebar (app.py)
     ckpt_str = st.session_state.get("GLOBAL_SELECTED_CKPT")
     if not ckpt_str or ckpt_str not in st.session_state["GLOBAL_MODEL_CACHE"]:
         st.warning("Chưa load được model từ sidebar.")
@@ -369,109 +391,113 @@ def run():
     classes = st.session_state["GLOBAL_CLASSES_CACHE"][ckpt_str] or []
     device = next(model.parameters()).device
 
+    ckpt_path = Path(ckpt_str)
+    run_dir = ckpt_path.parent.parent
+
     data_dir = Path(st.session_state.get(
         "DATA_DIR",
         "/media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images"
     ))
-    test_dir = Path(st.text_input("📁 Test Dir", value=str(data_dir / "Test"), key="vm_test"))
-    resize_mode = st.radio("Resize mode", ["stretch", "keep_ratio"], index=0, horizontal=True, key="vm_resize")
+
+    # Test dir & resize mode (vẫn cho chỉnh, nhưng sẽ auto evaluate)
+    default_test_dir = data_dir / "Test"
+    test_dir = Path(st.text_input("📁 Test Dir", value=str(default_test_dir), key="vm_test"))
+    resize_mode = st.radio(
+        "Resize mode",
+        ["stretch", "keep_ratio"],
+        index=0,
+        horizontal=True,
+        key="vm_resize"
+    )
     bs = st.slider("Batch size đánh giá", 8, 128, 64, step=8, key="vm_bs")
 
-    st.caption(f"Checkpoint: `{Path(ckpt_str).name}` • classes={len(classes) or '??'} • device={device.type.upper()}")
-
-
-    st.caption(Path(ckpt_str).parent.parent)
+    st.caption(
+        f"Checkpoint: `{ckpt_path.name}` • classes={len(classes) or '??'} • "
+        f"device={device.type.upper()}"
+    )
 
     # ========== PHÂN TÍCH QUÁ TRÌNH TRAIN TỪ metrics.csv ==========
-    st.subheader("📈 Phân tích quá trình huấn luyện (metrics.csv)")
+    st.subheader("📊 Learning curves (metrics.csv)")
 
-    default_metrics = str(
-        Path(ckpt_str).parent.parent / "metrics.csv"
-
-
-    #default_metrics = str(
-    #   Path("runs") / "mtl_efficientnet_b0_20251113-181112" / "metrics.csv"
-    )  # chỉnh lại tên run cho đúng với thư mục của bạn
-
-    metrics_path_str = st.text_input(
-        "📄 Đường dẫn tới metrics.csv",
-        value=default_metrics,
-        key="dm_metrics_csv",
-    )
-    metrics_path = Path(metrics_path_str)
+    metrics_path = run_dir / "metrics.csv"
+    st.caption(f"📄 metrics.csv: `{metrics_path}`")
 
     if not metrics_path.exists():
-        st.warning("⚠️ Không tìm thấy file metrics.csv, kiểm tra lại đường dẫn.")
+        st.warning("⚠️ Không tìm thấy file metrics.csv trong thư mục run này.")
     else:
         df_metrics = pd.read_csv(metrics_path)
-        required_cols = {"epoch", "train_loss", "val_loss", "train_acc", "val_acc"}
-        if not required_cols.issubset(df_metrics.columns):
-            st.error(f"metrics.csv thiếu cột: {required_cols - set(df_metrics.columns)}")
+        required = {"epoch", "train_loss", "val_loss", "train_acc", "val_acc"}
+        if not required.issubset(df_metrics.columns):
+            st.error(f"metrics.csv thiếu cột: {required - set(df_metrics.columns)}")
         else:
             with st.spinner("Đang vẽ learning curves..."):
                 fig_lc = plot_learning_curves(df_metrics)
             st.pyplot(fig_lc, use_container_width=True)
 
-            # Show bảng tóm tắt mấy epoch cuối cho dễ soi
             st.markdown("#### 📋 Một vài epoch cuối")
             st.dataframe(
                 df_metrics.tail(5).reset_index(drop=True),
                 use_container_width=True,
             )
 
-            # Nhận xét nhanh dựa trên shape của curve
-            best_epoch = int(df_metrics.loc[df_metrics["val_acc"].idxmax(), "epoch"])
-            best_val = float(df_metrics["val_acc"].max())
-            last_val = float(df_metrics["val_acc"].iloc[-1])
+    # ========== AUTO EVAL TRÊN TEST KHI ĐỔI CHECKPOINT ==========
+    cache = st.session_state.get("VM_CACHE")
+    cache_ckpt = st.session_state.get("VM_CACHE_CKPT")
 
-            st.markdown(
-                f"- 🏆 **Best val_acc** tại epoch `{best_epoch}` ≈ **{best_val:.4f}`**  \n"
-                f"- 🔚 val_acc epoch cuối ≈ **{last_val:.4f}**  \n"
-                "- Nếu train_loss giảm đều, val_loss cũng giảm rồi ổn định, "
-                "train_acc và val_acc bám nhau sát → mô hình học **ổn, ít overfit**.  \n"
-                "- Nếu train_loss giảm mạnh mà val_loss phình lên, train_acc cao nhưng val_acc đứng "
-                "hoặc giảm → dấu hiệu **overfitting**, nên tăng regularization / augment / early stopping sớm hơn."
-            )
+    need_eval = (
+        cache is None
+        or cache_ckpt != ckpt_str
+    )
 
+    if need_eval:
+        # chạy đánh giá luôn cho checkpoint này
+        if not test_dir.exists():
+            st.error(f"Thư mục Test không tồn tại: {test_dir}")
+            return
 
-
-
-
-
-
-
-
-
-
-
-
-
-    # 1) Chạy đánh giá
-    if st.button("🧪 Chạy đánh giá trên Test", key="vm_btn_eval"):
         tfm = make_transform(resize_mode)
         ds_test = datasets.ImageFolder(test_dir, transform=tfm)
-        dl_test = DataLoader(ds_test, batch_size=bs, shuffle=False, num_workers=2, pin_memory=True)
-
         if not classes:
             classes = ds_test.classes
             st.session_state["GLOBAL_CLASSES_CACHE"][ckpt_str] = classes
 
-        # >>> dùng progressbar theo batch
-        logits, targets = _infer_all_with_progress(model, dl_test, device)
+        dl_test = DataLoader(
+            ds_test,
+            batch_size=bs,
+            shuffle=False,
+            num_workers=2,
+            pin_memory=True,
+        )
 
-        probs  = torch.softmax(logits, dim=1).numpy()
+        with st.spinner("🧪 Đang đánh giá mô hình trên tập Test..."):
+            logits, targets = _infer_all_with_progress(model, dl_test, device)
+
+        probs = torch.softmax(logits, dim=1).numpy()
         y_true = targets.numpy()
         y_pred = probs.argmax(axis=1)
 
         st.session_state["VM_CACHE"] = dict(
-            y_true=y_true, y_pred=y_pred, probs=probs, classes=classes
+            y_true=y_true,
+            y_pred=y_pred,
+            probs=probs,
+            classes=classes,
         )
-        st.success(f"Test Accuracy: {(y_pred == y_true).mean() * 100:.2f}% | Số ảnh: {len(y_true):,}")
+        st.session_state["VM_CACHE_CKPT"] = ckpt_str
 
+        st.success(
+            f"Test Accuracy (auto): {(y_pred == y_true).mean() * 100:.2f}% "
+            f"| Số ảnh: {len(y_true):,}"
+        )
+    else:
+        # đã có cache cho checkpoint này
+        st.info(
+            "Đã sử dụng kết quả đánh giá cache cho checkpoint hiện tại. "
+            "Đổi checkpoint ở sidebar để đánh giá model khác."
+        )
 
     cache = st.session_state.get("VM_CACHE")
     if not cache:
-        st.info("Bấm **🧪 Chạy đánh giá trên Test** rồi chọn biểu đồ muốn xem.")
+        st.info("Chưa có kết quả đánh giá để vẽ biểu đồ.")
         return
 
     y_true = cache["y_true"]
@@ -482,7 +508,7 @@ def run():
     if "VM_FLAGS" not in st.session_state:
         st.session_state["VM_FLAGS"] = set()
 
-    # 2) Các nút vẽ (theo hàng, giữ hình cũ) + GIẢI THÍCH TRÊN UI
+    # ===== NÚT VẼ BIỂU ĐỒ =====
     if st.button("🔀 Vẽ Confusion Matrix", key="vm_btn_cm"):
         st.session_state["VM_FLAGS"].add("cm")
     if "cm" in st.session_state["VM_FLAGS"]:
