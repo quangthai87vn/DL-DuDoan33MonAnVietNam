@@ -230,3 +230,34 @@ Giúp tôi thêm 1 quy trình vào App stremlit (tạo file riêng) và gắn v�
 Edit file app_augment.py giúp tôi về cách xữ lý các phần của code này. làm các nút cho tính năng tuỳ chỉnh và người dùng nhập vào
 
 Phần cải tiến mô hình nên làm như thế nào
+
+
+
+
+5. Thêm món mới với rất ít ảnh – Few-shot / Incremental Learning
+Ý tưởng:
+Hiện có 33 món. Sau này muốn thêm:
+“Bánh tráng trộn”, “Mì quảng”, … nhưng chỉ có vài chục ảnh.
+Mục tiêu: không cần retrain từ đầu toàn bộ model.
+Tái sử dụng model:
+Dùng EfficientNet-B0 như backbone:
+Freeze phần lớn layer.
+Train thêm một classifier head mới với các class mới.
+Hoặc:
+Dùng embedding + thuật toán few-shot (Prototypical Networks style):
+Mỗi class = trung bình vector embedding.
+Ảnh mới → tính khoảng cách đến prototype để phân loại.
+Điểm hay để nói khi trình bày:
+Đây là vấn đề rất thực tế: hệ thống nhận diện trong doanh nghiệp không bao giờ “cố định class”.
+Ông đang giải bài toán incremental learning / continual learning trên dataset món ăn.
+
+
+
+OK. từ từ hãy làm thêm tính năng mà giờ tôi cần chuẩn hoá lại chương chình như sau
+- Tôi muốn có 1 file main.py để có thể gọi train và không dùng Jupyter. Trong quá trình train hiển thị độ chính xác và các tham số y chang kiểu Jupyter trước đó và lưu lịch sử độ chính xác khi train từng epoch, vẩn lưu các thọng số vào thư mục "runs_meta" của từng mô hình để load lại khi cần
+- Với file mtl_efficientnet_b0.py hãy check file mtl_efficientnet_b0.ipynb (đã gửi trước đó) giúp tôi buil lại class mtl_efficientnet_b0.py (lưu thư mục mới là "Jupyter/models/efficientnet_b0.py") cho chính xác các tham số . Trong file này vẩn sử dụng Focal CrossEntropy , optimizer & scheduler (AdamW + CosineAnnealing) và các kỹ thuật xữ lý ảnh y chang file mtl_efficientnet_b0.ipynb và các kỹ thuật khác để tăng độ chính xác khi train
+- Sau đó tạo ra 1 file riêng main.py (trong thư mục Jupyter) để có thể gọi chạy mtl_efficientnet_b0.py  và train mô hình 33 món trước đó
+- Sau đó dùng Jupyter để load lại mô hình theo các trọng số trong mtl_efficientnet_b0.py để đánh giá mô hình
+- Sau khi mô hình này chuẩn tôi mới tiếp tục triển khai nhận dạng thêm 3 món mới 
+Trước khi thực hiện hạy vẽ cấu trúc thư mục và xác nhận những gì đã hiểu rồi hãy làm
+

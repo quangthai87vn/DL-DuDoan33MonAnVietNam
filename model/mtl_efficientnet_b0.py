@@ -68,3 +68,6 @@ def mtl_efficientnet_b0_model(num_classes: int = 33,
         pretrained=pretrained,
         freeze_backbone=freeze_backbone
     )
+
+
+
