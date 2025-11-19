@@ -1,19 +1,19 @@
-task: detect
+task: classify
 mode: train
-model: yolo11s.pt
-data: /media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/FoodTables/data_food_plate.yaml
+model: yolo11n-cls.pt
+data: /media/mtl/DATA 6TB/AI DATASET/vietnamese-foods/Images_cls
 epochs: 100
 time: null
 patience: 100
-batch: 16
-imgsz: 640
+batch: 64
+imgsz: 224
 save: true
 save_period: -1
 cache: false
 device: '0'
 workers: 8
-project: /media/mtl/DATA 6TB/PROJECT AI/DL-DuDoan33MonAnVietNam/Jupyter/Yolo
-name: MTL_FOOD_PLATE_01
+project: runs_yolo_cls33
+name: MTL_FOOD33_CLS_01
 exist_ok: false
 pretrained: true
 optimizer: auto
@@ -103,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: /media/mtl/DATA 6TB/PROJECT AI/DL-DuDoan33MonAnVietNam/Jupyter/Yolo/MTL_FOOD_PLATE_01
+save_dir: /media/mtl/DATA 6TB/PROJECT AI/DL-DuDoan33MonAnVietNam/Jupyter/Yolo/runs_yolo_cls33/MTL_FOOD33_CLS_01
