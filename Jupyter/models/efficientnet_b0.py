@@ -341,3 +341,4 @@ def build_optim_sched(
 def accuracy_from_logits(logits: torch.Tensor, targets: torch.Tensor) -> float:
     preds = torch.argmax(logits, dim=1)
     return (preds == targets).float().mean().item()
+

@@ -269,7 +269,6 @@ phần đánh giá mô hình có lỗi: cần sửa lại như sau :
 
 
 2. Đếm số món ăn trên bàn – chuyển lên bài toán detection
-Ông đã nhắc vụ này rồi, giờ làm bài bản:
 Ý tưởng:
 Input: ảnh 1 cái bàn ăn nhiều món → hệ thống:
 Phát hiện vùng có món ăn (object detection / segmentation).
@@ -285,7 +284,23 @@ Pipeline:
 Detector → sinh bounding box.
 Mỗi bounding box crop → resize → cho EfficientNet-B0 class.
 Lợi thế học thuật:
-Ông nâng từ image-level classification → instance-level recognition.
+ nâng từ image-level classification → instance-level recognition.
 Có thể so sánh:
 Accuracy thuần classifier vs accuracy end-to-end (detector + classifier).
 Thời gian inference, độ phức tạp hệ thống.
+
+
+
+
+
+
+Bây giờ . Giúp tôi dự đoán hình ảnh chụp 1 bàn ăn nhiều món yêu câù như sau
+File Jupyter trực quan dự đoán lưu tại "Jupyter/YOLO_33/nhandienmonan.ipynb"
+Các hàm xữ lý lưu tại: "Jupyter/YOLO_33/nhandienmonan.py"
+Sau này sẽ viết thêm streamlit app bổ sung "webapps/nhandienmonantrenban.py" để  nhận diện trực quan
+Tính năng: border box món  ăn (đóng khung món) , đếm tổng số lượng món ăn theo box , chỉ nhận diện các món ăn đã biết trong 33-34 món (cho 1 ngưỡng nhận diện ví dụ từ 80% do người dùng chọn), 
+Kiến trúc: 
+- Load 2 mô hình: mô hình đóng box các món ăn tại đường dẩn "Jupyter/Yolo/runs_yolo_cls33/MTL_FOOD33_CLS_01/weights/best.pt" và mô hình nhận diện 33 món ăn tại "Jupyter/runs/MTL_TGFOOD/checkpoints/mtl_effcientnet_b0_best.pt"
+- Hiển thị ảnh bàn ăn đã đóng box trên Jupyter  và lưu xuống "/media/mtl/DATA 6TB/PROJECT AI/DL-DuDoan33MonAnVietNam/Jupyter/YOLO_33/images"
+- Hàm cắt ảnh hiển thị trên Jupyter và lưu xuống
+- Hàm hiển thị ảnh nhận diện món
