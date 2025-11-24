@@ -166,5 +166,5 @@ data/*
 test/*Jupyter/runs/
 runs/
 checkpoints/
-*.pt
+#*.pt
 *.mtl
