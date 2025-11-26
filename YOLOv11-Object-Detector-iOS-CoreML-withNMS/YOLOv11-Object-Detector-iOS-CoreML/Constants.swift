@@ -7,7 +7,13 @@
 
 import Foundation
 
+//
+//struct Constants {
+//    static let modelName = "food_yolov11_best"//"yolo11s"
+//}
 
-struct Constants {
-    static let modelName = "food_yolov11_best"//"yolo11s"
+
+enum Constants {
+    static let modelName = "food_yolov11_best"          // YOLO model
+    static let mainDishModelName = "FoodMainDishEfficientNet"  // EfficientNet CoreML
 }
