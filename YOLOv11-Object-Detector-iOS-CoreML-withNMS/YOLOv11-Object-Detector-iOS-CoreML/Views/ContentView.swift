@@ -1,13 +1,6 @@
-
 import SwiftUI
-import PhotosUI
 import UIKit
 import AVFoundation
-
-enum DetectionMode {
-    case camera
-    case photo
-}
 
 // MARK: - Text-to-Speech
 
@@ -38,20 +31,22 @@ struct ContentView: View {
     @Bindable private var detector: Detector
     @Bindable private var mainDishClassifier: MainDishClassifier
     
-    @State private var mode: DetectionMode = .camera
-    @State private var selectedImage: UIImage?
-    @State private var photoItem: PhotosPickerItem?
-
-    
     @StateObject private var speechManager = SpeechManager()
+    
+    // Auto-speak state
+    @State private var detectionBeganAt: Date? = nil
+    @State private var lastAutoSentence: String = ""
+    @State private var lastAutoSpeakTime: Date = .distantPast
+    @State private var hasSpokenAuto: Bool = false   // đã auto đọc cho cảnh hiện tại chưa
     
     init() {
         self.detector = Detector(modelName: Constants.modelName)
         self.mainDishClassifier = MainDishClassifier(modelName: Constants.mainDishModelName)
     }
     
-    // MARK: - Helper: đếm số lượng từng nhãn
+    // MARK: - Helpers
     
+    /// Đếm số lượng từng nhãn từ YOLO
     private var objectCounts: [(label: String, count: Int)] {
         let labels = detector.detectedObjects.map { $0.label }
         let dict = Dictionary(grouping: labels, by: { $0 }).mapValues { $0.count }
@@ -60,7 +55,7 @@ struct ContentView: View {
             .sorted { $0.label < $1.label }
     }
     
-    // Màu ổn định cho mỗi label (hash giống BoundingBoxView)
+    /// Màu ổn định cho mỗi label (hash giống BoundingBoxView)
     private func color(for label: String) -> Color {
         var hasher = Hasher()
         hasher.combine(label)
@@ -71,7 +66,7 @@ struct ContentView: View {
         return Color(red: r, green: g, blue: b)
     }
     
-    // Chuỗi đọc ra loa
+    /// Câu sẽ đọc ra loa
     private func buildSpeechSentence() -> String {
         var parts: [String] = []
         
@@ -101,51 +96,65 @@ struct ContentView: View {
         return parts.joined(separator: " ")
     }
     
+    // MARK: - Auto-speak logic
+    
+    /// Xử lý mỗi frame từ camera
+    private func processFrame(_ buffer: CVPixelBuffer) {
+        detector.detectObjects(pixelBuffer: buffer)
+        mainDishClassifier.classify(pixelBuffer: buffer)
+        autoSpeakIfStable()
+    }
+    
+    /// Tự đọc sau khi phát hiện ổn định ~3 giây, không spam
+    private func autoSpeakIfStable() {
+        let now = Date()
+        
+        // Không có món chính và không có thành phần → reset state
+        if objectCounts.isEmpty && mainDishClassifier.mainDishLabel == nil {
+            detectionBeganAt = nil
+            hasSpokenAuto = false
+            lastAutoSentence = ""
+            return
+        }
+        
+        // Nếu đã auto đọc cho cảnh hiện tại rồi thì thôi, không đọc nữa
+        if hasSpokenAuto {
+            return
+        }
+        
+        // Bắt đầu đếm thời gian từ frame đầu tiên có detection
+        if detectionBeganAt == nil {
+            detectionBeganAt = now
+            return
+        }
+        
+        // Chưa đủ 3 giây thì đợi
+        guard now.timeIntervalSince(detectionBeganAt!) >= 3 else { return }
+        
+        // Đủ 3 giây detection ổn định → build câu và đọc
+        let sentence = buildSpeechSentence()
+        guard !sentence.isEmpty else { return }
+        
+        speechManager.speak(sentence)
+        hasSpokenAuto = true
+        lastAutoSentence = sentence
+        lastAutoSpeakTime = now
+    }
+    
     // MARK: - Body
     
     var body: some View {
         ZStack {
-            // Nền: camera hoặc ảnh
-            Group {
-                switch mode {
-                case .camera:
-                    CameraView(cameraService: cameraService) { buffer in
-                        detector.detectObjects(pixelBuffer: buffer)
-                        mainDishClassifier.classify(pixelBuffer: buffer)
-                    }
-                case .photo:
-                    GeometryReader { geometry in
-                        if let image = selectedImage {
-                            ZStack {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: geometry.size.width,
-                                           height: geometry.size.height)
-                                    .background(Color.black)
-                                
-                                ForEach(detector.detectedObjects) { object in
-                                    BoundingBoxView(object: object,
-                                                    parentSize: geometry.size)
-                                }
-                            }
-                        } else {
-                            Text("Chọn một hình để nhận diện")
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(Color.black)
-                        }
-                    }
-                }
+            // Nền: camera realtime
+            CameraView(cameraService: cameraService) { buffer in
+                processFrame(buffer)
             }
             
-            // Overlay box khi camera
-            if mode == .camera {
-                GeometryReader { geometry in
-                    ForEach(detector.detectedObjects) { object in
-                        BoundingBoxView(object: object,
-                                        parentSize: geometry.size)
-                    }
+            // Vẽ bounding box
+            GeometryReader { geometry in
+                ForEach(detector.detectedObjects) { object in
+                    BoundingBoxView(object: object,
+                                    parentSize: geometry.size)
                 }
             }
             
@@ -164,25 +173,6 @@ struct ContentView: View {
         .ignoresSafeArea()
         .onDisappear {
             speechManager.stop()
-        }
-        .onChange(of: photoItem) { newItem in
-            guard let newItem else { return }
-            
-            Task {
-                if let data = try? await newItem.loadTransferable(type: Data.self),
-                   let uiImage = UIImage(data: data),
-                   let cgImage = uiImage.cgImage {
-                    
-                    await MainActor.run {
-                        self.selectedImage = uiImage
-                        self.mode = .photo
-                        self.detector.detectedObjects = []
-                    }
-                    
-                    detector.detectObjects(on: cgImage)
-                    mainDishClassifier.classify(cgImage: cgImage)
-                }
-            }
         }
     }
     
@@ -218,44 +208,12 @@ struct ContentView: View {
         .cornerRadius(12)
     }
     
-    // MARK: - Bottom Panel (button cố định dưới cùng)
+    // MARK: - Bottom Panel
     
     @ViewBuilder
     private func bottomPanel() -> some View {
         VStack(spacing: 10) {
-            // Hai nút chọn mode
-            HStack {
-                Button {
-                    mode = .camera
-                    selectedImage = nil
-                } label: {
-                    HStack {
-                        Image(systemName: "camera.fill")
-                        Text("Nhận diện qua camera")
-                    }
-                    .font(.subheadline)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(mode == .camera ? Color.white : Color.white.opacity(0.2))
-                    .foregroundColor(mode == .camera ? .black : .white)
-                    .cornerRadius(14)
-                }
-                
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    HStack {
-                        Image(systemName: "photo.on.rectangle")
-                        Text("Nhận diện qua hình")
-                    }
-                    .font(.subheadline)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(mode == .photo ? Color.white : Color.white.opacity(0.2))
-                    .foregroundColor(mode == .photo ? .black : .white)
-                    .cornerRadius(14)
-                }
-            }
-            
-            // Khối thống kê + thời gian (mọc lên từ dưới)
+            // Thống kê thành phần (mọc lên từ dưới)
             if !objectCounts.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Thống kê thành phần trong món ăn")
@@ -288,7 +246,7 @@ struct ContentView: View {
                 .background(Color.black.opacity(0.6))
                 .cornerRadius(8)
             
-            // Nút ĐỌC – luôn là phần cuối cùng, dính sát đáy
+            // Nút ĐỌC – người dùng chủ động bấm lại nếu muốn
             Button {
                 let sentence = buildSpeechSentence()
                 speechManager.speak(sentence)
@@ -323,3 +281,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+
