@@ -71,6 +71,7 @@ final class MainDishClassifier {
                 self.mainDishConfidence = 0
                 return
             }
+           
             
             if best.confidence >= self.minDishConfidence {
                 self.mainDishLabel = best.identifier
