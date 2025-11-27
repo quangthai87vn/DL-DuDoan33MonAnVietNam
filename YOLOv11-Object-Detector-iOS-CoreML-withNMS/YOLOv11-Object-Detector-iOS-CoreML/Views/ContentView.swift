@@ -35,12 +35,13 @@ final class SpeechManager: ObservableObject {
 struct ContentView: View {
     let cameraService = CameraService()
     
-    @Bindable private var detector: Detector               // YOLO – nguyên liệu
-    @Bindable private var mainDishClassifier: MainDishClassifier // EfficientNet – món chính
+    @Bindable private var detector: Detector
+    @Bindable private var mainDishClassifier: MainDishClassifier
     
     @State private var mode: DetectionMode = .camera
     @State private var selectedImage: UIImage?
     @State private var photoItem: PhotosPickerItem?
+
     
     @StateObject private var speechManager = SpeechManager()
     
@@ -49,7 +50,8 @@ struct ContentView: View {
         self.mainDishClassifier = MainDishClassifier(modelName: Constants.mainDishModelName)
     }
     
-    /// Đếm số lượng từng nhãn từ YOLO
+    // MARK: - Helper: đếm số lượng từng nhãn
+    
     private var objectCounts: [(label: String, count: Int)] {
         let labels = detector.detectedObjects.map { $0.label }
         let dict = Dictionary(grouping: labels, by: { $0 }).mapValues { $0.count }
@@ -58,18 +60,27 @@ struct ContentView: View {
             .sorted { $0.label < $1.label }
     }
     
-    /// Chuỗi sẽ đọc ra loa: món chính + thành phần
+    // Màu ổn định cho mỗi label (hash giống BoundingBoxView)
+    private func color(for label: String) -> Color {
+        var hasher = Hasher()
+        hasher.combine(label)
+        let hash = hasher.finalize()
+        let r = Double((hash & 0xFF0000) >> 16) / 255.0
+        let g = Double((hash & 0x00FF00) >> 8) / 255.0
+        let b = Double(hash & 0x0000FF) / 255.0
+        return Color(red: r, green: g, blue: b)
+    }
+    
+    // Chuỗi đọc ra loa
     private func buildSpeechSentence() -> String {
         var parts: [String] = []
-
-        // Món chính
+        
         if let rawDish = mainDishClassifier.mainDishLabel {
             let dish = LabelMapper.displayName(for: rawDish)
             let percent = Int(mainDishClassifier.mainDishConfidence * 100)
             parts.append("Món chính: \(dish), độ tin cậy \(percent) phần trăm.")
         }
-
-        // Thành phần
+        
         if !objectCounts.isEmpty {
             let ingredientText = objectCounts.map { item -> String in
                 let prettyName = LabelMapper.displayName(for: item.label)
@@ -79,23 +90,18 @@ struct ContentView: View {
                     return prettyName
                 }
             }.joined(separator: ", ")
-
+            
             parts.append("Thành phần gồm: \(ingredientText).")
         }
-
+        
         if parts.isEmpty {
             return "Chưa nhận diện được món ăn hoặc thành phần rõ ràng."
         }
-
+        
         return parts.joined(separator: " ")
     }
-
     
-    
-    
-    
-    
-    
+    // MARK: - Body
     
     var body: some View {
         ZStack {
@@ -103,17 +109,14 @@ struct ContentView: View {
             Group {
                 switch mode {
                 case .camera:
-                    // Realtime: camera + YOLO + món chính
                     CameraView(cameraService: cameraService) { buffer in
                         detector.detectObjects(pixelBuffer: buffer)
                         mainDishClassifier.classify(pixelBuffer: buffer)
                     }
-                    
                 case .photo:
                     GeometryReader { geometry in
                         if let image = selectedImage {
                             ZStack {
-                                // ❗ Giữ nguyên tấm hình (không crop)
                                 Image(uiImage: image)
                                     .resizable()
                                     .scaledToFit()
@@ -121,7 +124,6 @@ struct ContentView: View {
                                            height: geometry.size.height)
                                     .background(Color.black)
                                 
-                                // Vẽ bounding box YOLO lên ảnh
                                 ForEach(detector.detectedObjects) { object in
                                     BoundingBoxView(object: object,
                                                     parentSize: geometry.size)
@@ -137,7 +139,7 @@ struct ContentView: View {
                 }
             }
             
-            // Nếu đang ở camera thì overlay box riêng (tránh double vẽ)
+            // Overlay box khi camera
             if mode == .camera {
                 GeometryReader { geometry in
                     ForEach(detector.detectedObjects) { object in
@@ -147,144 +149,15 @@ struct ContentView: View {
                 }
             }
             
-            // Overlay UI trên/dưới
+            // Overlay UI
             VStack {
-                // HEADER
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Bùi Quang Thái: Nhận diện nguyên liệu")
-                            .font(.headline)
-                            .bold()
-                            .foregroundColor(.white)
-                        
-                        Text("Đưa camera vào bàn ăn để nhận diện thành phần của món ăn")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        // Món chính từ EfficientNet – dùng cho cả camera & photo
-                        /*
-                        if let dish = mainDishClassifier.mainDishLabel {
-                            Text("Món chính: \(dish) (\(Int(mainDishClassifier.mainDishConfidence * 100))%)")
-                                .font(.subheadline)
-                                .bold()
-                                .foregroundColor(.yellow)
-                                .padding(.top, 4)
-                        }
-                        */
-                        
-                        
-                        
-                        if let rawDish = mainDishClassifier.mainDishLabel {
-                            let dish = LabelMapper.displayName(for: rawDish)
-                            Text("Món chính: \(dish) (\(Int(mainDishClassifier.mainDishConfidence * 100))%)")
-                                .font(.subheadline)
-                                .bold()
-                                .foregroundColor(.yellow)
-                                .padding(.top, 4)
-                        }
-                        
-                        
-                    }
-                    
-                    Spacer()
-                }
-                .padding(10)
-                .background(Color.black.opacity(0.6))
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-                .padding(.top, 40)
+                headerView()
+                    .padding(.top, 40)
+                    .padding(.horizontal, 16)
                 
                 Spacer()
                 
-                // FOOTER: nút + thống kê
-                VStack(alignment: .leading, spacing: 12) {
-                    // 2 nút switch mode
-                    HStack {
-                        /*
-                        Button {
-                            mode = .camera
-                            selectedImage = nil
-                        } label: {
-                            HStack {
-                                Image(systemName: "camera.fill")
-                                Text("Nhận diện qua camera")
-                            }
-                            .font(.subheadline)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(mode == .camera ? Color.white : Color.white.opacity(0.2))
-                            .foregroundColor(mode == .camera ? .black : .white)
-                            .cornerRadius(14)
-                        }
-                       
-                        PhotosPicker(selection: $photoItem, matching: .images) {
-                            HStack {
-                                Image(systemName: "photo.on.rectangle")
-                                Text("Nhận diện qua hình")
-                            }
-                            .font(.subheadline)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(mode == .photo ? Color.white : Color.white.opacity(0.2))
-                            .foregroundColor(mode == .photo ? .black : .white)
-                            .cornerRadius(14)
-                        }
-                         */
-                    }
-                    
-                    // 🔊 Nút đọc món & thành phần
-                    Button {
-                        let sentence = buildSpeechSentence()
-                        speechManager.speak(sentence)
-                    } label: {
-                        HStack {
-                            Image(systemName: "speaker.wave.2.fill")
-                            Text("Đọc món & thành phần")
-                        }
-                        .font(.subheadline)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background((mainDishClassifier.mainDishLabel == nil && objectCounts.isEmpty) ? Color.gray.opacity(0.4) : Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(14)
-                    }
-                    .disabled(mainDishClassifier.mainDishLabel == nil && objectCounts.isEmpty)
-                    
-                    // Thống kê đối tượng
-                    if !objectCounts.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Thống kê thành phần trong món ăn")
-                                .font(.subheadline)
-                                .bold()
-                                .foregroundColor(.white)
-                            
-                           
-                            
-                            ForEach(objectCounts, id: \.label) { item in
-                                let prettyName = LabelMapper.displayName(for: item.label)
-                                Text("\(prettyName): \(item.count)")
-                                    .font(.caption2)
-                                    .foregroundColor(.white)
-                            }
-
-                            
-                            
-                            
-                        }
-                        .padding(8)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(10)
-                    }
-                    
-                    Text(String(format: "Thời gian phản hồi: %.1f ms", detector.interfaceTime))
-                        .font(.footnote)
-                        .foregroundColor(.white)
-                        .padding(8)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(8)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                bottomPanel()
             }
         }
         .background(Color.black)
@@ -292,8 +165,6 @@ struct ContentView: View {
         .onDisappear {
             speechManager.stop()
         }
-        
-        // Khi user chọn 1 tấm ảnh từ Photos
         .onChange(of: photoItem) { newItem in
             guard let newItem else { return }
             
@@ -302,21 +173,150 @@ struct ContentView: View {
                    let uiImage = UIImage(data: data),
                    let cgImage = uiImage.cgImage {
                     
-                    // Cập nhật UI
                     await MainActor.run {
                         self.selectedImage = uiImage
                         self.mode = .photo
-                        // clear kết quả cũ
                         self.detector.detectedObjects = []
                     }
                     
-                    // YOLO: nguyên liệu
                     detector.detectObjects(on: cgImage)
-                    // EfficientNet: món chính
                     mainDishClassifier.classify(cgImage: cgImage)
                 }
             }
         }
+    }
+    
+    // MARK: - Header
+    
+    @ViewBuilder
+    private func headerView() -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Bùi Quang Thái: Nhận diện nguyên liệu")
+                    .font(.headline)
+                    .bold()
+                    .foregroundColor(.white)
+                
+                Text("Đưa camera vào bàn ăn để nhận diện thành phần của món ăn")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.9))
+                
+                if let rawDish = mainDishClassifier.mainDishLabel {
+                    let dish = LabelMapper.displayName(for: rawDish)
+                    Text("Món chính: \(dish) (\(Int(mainDishClassifier.mainDishConfidence * 100))%)")
+                        .font(.subheadline)
+                        .bold()
+                        .foregroundColor(.yellow)
+                        .padding(.top, 4)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(10)
+        .background(Color.black.opacity(0.6))
+        .cornerRadius(12)
+    }
+    
+    // MARK: - Bottom Panel (button cố định dưới cùng)
+    
+    @ViewBuilder
+    private func bottomPanel() -> some View {
+        VStack(spacing: 10) {
+            // Hai nút chọn mode
+            HStack {
+                Button {
+                    mode = .camera
+                    selectedImage = nil
+                } label: {
+                    HStack {
+                        Image(systemName: "camera.fill")
+                        Text("Nhận diện qua camera")
+                    }
+                    .font(.subheadline)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(mode == .camera ? Color.white : Color.white.opacity(0.2))
+                    .foregroundColor(mode == .camera ? .black : .white)
+                    .cornerRadius(14)
+                }
+                
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    HStack {
+                        Image(systemName: "photo.on.rectangle")
+                        Text("Nhận diện qua hình")
+                    }
+                    .font(.subheadline)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(mode == .photo ? Color.white : Color.white.opacity(0.2))
+                    .foregroundColor(mode == .photo ? .black : .white)
+                    .cornerRadius(14)
+                }
+            }
+            
+            // Khối thống kê + thời gian (mọc lên từ dưới)
+            if !objectCounts.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Thống kê thành phần trong món ăn")
+                        .font(.subheadline)
+                        .bold()
+                        .foregroundColor(.white)
+                    
+                    ForEach(objectCounts, id: \.label) { item in
+                        let prettyName = LabelMapper.displayName(for: item.label)
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(color(for: item.label))
+                                .frame(width: 8, height: 8)
+                            
+                            Text("\(prettyName): \(item.count)")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .padding(8)
+                .background(Color.black.opacity(0.7))
+                .cornerRadius(10)
+            }
+            
+            Text(String(format: "Thời gian phản hồi: %.1f ms", detector.interfaceTime))
+                .font(.footnote)
+                .foregroundColor(.white)
+                .padding(6)
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(8)
+            
+            // Nút ĐỌC – luôn là phần cuối cùng, dính sát đáy
+            Button {
+                let sentence = buildSpeechSentence()
+                speechManager.speak(sentence)
+            } label: {
+                HStack {
+                    Image(systemName: "speaker.wave.2.fill")
+                    Text("Đọc món & thành phần")
+                }
+                .font(.subheadline)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity)
+                .background((mainDishClassifier.mainDishLabel == nil && objectCounts.isEmpty) ? Color.gray.opacity(0.5) : Color.orange)
+                .foregroundColor(.white)
+                .cornerRadius(16)
+            }
+            .disabled(mainDishClassifier.mainDishLabel == nil && objectCounts.isEmpty)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.black.opacity(0.7), Color.black.opacity(0.0)]),
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .ignoresSafeArea(edges: .bottom)
+        )
     }
 }
 
