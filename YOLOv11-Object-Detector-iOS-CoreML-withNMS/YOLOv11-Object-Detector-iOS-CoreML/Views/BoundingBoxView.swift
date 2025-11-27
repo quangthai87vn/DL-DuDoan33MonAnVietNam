@@ -51,14 +51,15 @@ struct BoundingBoxView: View {
     var body: some View {
         let boxColor = color(for: object.label)
         let rect = self.rect
-        
+        let displayLabel = LabelMapper.displayName(for: object.label)   // ⬅️ thêm dòng này
+
         ZStack(alignment: .topLeading) {
             Rectangle()
                 .stroke(boxColor, lineWidth: 2)
                 .frame(width: rect.width, height: rect.height)
                 .position(x: rect.midX, y: rect.midY)
-            
-            Text(object.label + ": " + String(format: "%.0f%%", object.confidence * 100))
+
+            Text(displayLabel + ": " + String(format: "%.0f%%", object.confidence * 100))
                 .font(.caption2)
                 .foregroundColor(.white)
                 .padding(5)
@@ -68,5 +69,9 @@ struct BoundingBoxView: View {
                           y: max(rect.minY - 12, 0))
         }
     }
+
+    
+    
+    
 }
 

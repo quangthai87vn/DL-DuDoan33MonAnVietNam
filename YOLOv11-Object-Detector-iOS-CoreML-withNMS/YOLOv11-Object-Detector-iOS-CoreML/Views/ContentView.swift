@@ -1,10 +1,35 @@
+
 import SwiftUI
 import PhotosUI
 import UIKit
+import AVFoundation
 
 enum DetectionMode {
     case camera
     case photo
+}
+
+// MARK: - Text-to-Speech
+
+final class SpeechManager: ObservableObject {
+    private let synthesizer = AVSpeechSynthesizer()
+    
+    func speak(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        let utterance = AVSpeechUtterance(string: trimmed)
+        utterance.voice = AVSpeechSynthesisVoice(language: "vi-VN")
+        utterance.rate = 0.5
+        utterance.pitchMultiplier = 1.0
+        
+        synthesizer.stopSpeaking(at: .immediate)
+        synthesizer.speak(utterance)
+    }
+    
+    func stop() {
+        synthesizer.stopSpeaking(at: .immediate)
+    }
 }
 
 struct ContentView: View {
@@ -16,6 +41,8 @@ struct ContentView: View {
     @State private var mode: DetectionMode = .camera
     @State private var selectedImage: UIImage?
     @State private var photoItem: PhotosPickerItem?
+    
+    @StateObject private var speechManager = SpeechManager()
     
     init() {
         self.detector = Detector(modelName: Constants.modelName)
@@ -30,6 +57,45 @@ struct ContentView: View {
             .map { (label: $0.key, count: $0.value) }
             .sorted { $0.label < $1.label }
     }
+    
+    /// Chuỗi sẽ đọc ra loa: món chính + thành phần
+    private func buildSpeechSentence() -> String {
+        var parts: [String] = []
+
+        // Món chính
+        if let rawDish = mainDishClassifier.mainDishLabel {
+            let dish = LabelMapper.displayName(for: rawDish)
+            let percent = Int(mainDishClassifier.mainDishConfidence * 100)
+            parts.append("Món chính: \(dish), độ tin cậy \(percent) phần trăm.")
+        }
+
+        // Thành phần
+        if !objectCounts.isEmpty {
+            let ingredientText = objectCounts.map { item -> String in
+                let prettyName = LabelMapper.displayName(for: item.label)
+                if item.count > 1 {
+                    return "\(item.count) \(prettyName)"
+                } else {
+                    return prettyName
+                }
+            }.joined(separator: ", ")
+
+            parts.append("Thành phần gồm: \(ingredientText).")
+        }
+
+        if parts.isEmpty {
+            return "Chưa nhận diện được món ăn hoặc thành phần rõ ràng."
+        }
+
+        return parts.joined(separator: " ")
+    }
+
+    
+    
+    
+    
+    
+    
     
     var body: some View {
         ZStack {
@@ -96,6 +162,7 @@ struct ContentView: View {
                             .foregroundColor(.white.opacity(0.9))
                         
                         // Món chính từ EfficientNet – dùng cho cả camera & photo
+                        /*
                         if let dish = mainDishClassifier.mainDishLabel {
                             Text("Món chính: \(dish) (\(Int(mainDishClassifier.mainDishConfidence * 100))%)")
                                 .font(.subheadline)
@@ -103,6 +170,20 @@ struct ContentView: View {
                                 .foregroundColor(.yellow)
                                 .padding(.top, 4)
                         }
+                        */
+                        
+                        
+                        
+                        if let rawDish = mainDishClassifier.mainDishLabel {
+                            let dish = LabelMapper.displayName(for: rawDish)
+                            Text("Món chính: \(dish) (\(Int(mainDishClassifier.mainDishConfidence * 100))%)")
+                                .font(.subheadline)
+                                .bold()
+                                .foregroundColor(.yellow)
+                                .padding(.top, 4)
+                        }
+                        
+                        
                     }
                     
                     Spacer()
@@ -119,6 +200,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     // 2 nút switch mode
                     HStack {
+                        /*
                         Button {
                             mode = .camera
                             selectedImage = nil
@@ -134,7 +216,7 @@ struct ContentView: View {
                             .foregroundColor(mode == .camera ? .black : .white)
                             .cornerRadius(14)
                         }
-                        
+                       
                         PhotosPicker(selection: $photoItem, matching: .images) {
                             HStack {
                                 Image(systemName: "photo.on.rectangle")
@@ -147,21 +229,47 @@ struct ContentView: View {
                             .foregroundColor(mode == .photo ? .black : .white)
                             .cornerRadius(14)
                         }
+                         */
                     }
+                    
+                    // 🔊 Nút đọc món & thành phần
+                    Button {
+                        let sentence = buildSpeechSentence()
+                        speechManager.speak(sentence)
+                    } label: {
+                        HStack {
+                            Image(systemName: "speaker.wave.2.fill")
+                            Text("Đọc món & thành phần")
+                        }
+                        .font(.subheadline)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background((mainDishClassifier.mainDishLabel == nil && objectCounts.isEmpty) ? Color.gray.opacity(0.4) : Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(14)
+                    }
+                    .disabled(mainDishClassifier.mainDishLabel == nil && objectCounts.isEmpty)
                     
                     // Thống kê đối tượng
                     if !objectCounts.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Thống kê đối tượng")
+                            Text("Thống kê thành phần trong món ăn")
                                 .font(.subheadline)
                                 .bold()
                                 .foregroundColor(.white)
                             
+                           
+                            
                             ForEach(objectCounts, id: \.label) { item in
-                                Text("\(item.label): \(item.count)")
+                                let prettyName = LabelMapper.displayName(for: item.label)
+                                Text("\(prettyName): \(item.count)")
                                     .font(.caption2)
                                     .foregroundColor(.white)
                             }
+
+                            
+                            
+                            
                         }
                         .padding(8)
                         .background(Color.black.opacity(0.6))
@@ -181,6 +289,9 @@ struct ContentView: View {
         }
         .background(Color.black)
         .ignoresSafeArea()
+        .onDisappear {
+            speechManager.stop()
+        }
         
         // Khi user chọn 1 tấm ảnh từ Photos
         .onChange(of: photoItem) { newItem in
@@ -212,4 +323,3 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
-
