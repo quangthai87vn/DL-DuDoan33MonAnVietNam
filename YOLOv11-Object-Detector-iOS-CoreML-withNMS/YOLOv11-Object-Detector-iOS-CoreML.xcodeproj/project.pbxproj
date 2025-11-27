@@ -9,12 +9,14 @@
 /* Begin PBXBuildFile section */
 		84195FAC2ED5A33400CE9114 /* FoodMainDishEfficientNet.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 84195FAB2ED5A33400CE9114 /* FoodMainDishEfficientNet.mlpackage */; };
 		8481F5312ED52B26006C1954 /* food_yolov11_best.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 8481F5302ED52B26006C1954 /* food_yolov11_best.mlpackage */; };
+		84E1D9C92ED8AF1F00D163EC /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 84E1D9C82ED8AF1F00D163EC /* Launch Screen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		84195FAB2ED5A33400CE9114 /* FoodMainDishEfficientNet.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = FoodMainDishEfficientNet.mlpackage; sourceTree = "<group>"; };
 		8481F5112ED52A71006C1954 /* YOLOv11-Object-Detector-iOS-CoreML.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "YOLOv11-Object-Detector-iOS-CoreML.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8481F5302ED52B26006C1954 /* food_yolov11_best.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = food_yolov11_best.mlpackage; sourceTree = "<group>"; };
+		84E1D9C82ED8AF1F00D163EC /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -43,6 +45,7 @@
 				8481F5112ED52A71006C1954 /* YOLOv11-Object-Detector-iOS-CoreML.app */,
 				8481F5302ED52B26006C1954 /* food_yolov11_best.mlpackage */,
 				84195FAB2ED5A33400CE9114 /* FoodMainDishEfficientNet.mlpackage */,
+				84E1D9C82ED8AF1F00D163EC /* Launch Screen.storyboard */,
 			);
 			sourceTree = "<group>";
 		};
@@ -110,6 +113,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84E1D9C92ED8AF1F00D163EC /* Launch Screen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,7 +260,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"YOLOv11-Object-Detector-iOS-CoreML/Preview Content\"";
@@ -269,9 +273,10 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UILaunchStoryboardName = LaunchImage;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
+				INFOPLIST_KEY_UIStatusBarHidden = NO;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -290,7 +295,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"YOLOv11-Object-Detector-iOS-CoreML/Preview Content\"";
@@ -303,9 +308,10 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UILaunchStoryboardName = LaunchImage;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
+				INFOPLIST_KEY_UIStatusBarHidden = NO;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
