@@ -16,7 +16,7 @@ final class MainDishClassifier {
     private let updateInterval: CFAbsoluteTime = 0.7
     
     /// Ngưỡng tin cậy tối thiểu để show Món chính
-    private let minDishConfidence: Float = 0.4
+    private let minDishConfidence: Float = 0.2
     
     init(modelName: String) {
         do {
